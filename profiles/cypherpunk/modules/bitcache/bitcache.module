@@ -1,5 +1,5 @@
 <?php
-// $Id: bitcache.module,v 1.33 2009/07/01 08:55:37 arto Exp $
+// $Id: bitcache.module,v 1.34 2009/07/04 11:57:16 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Module settings
@@ -12,7 +12,7 @@ define('BITCACHE_CRON',   trim(variable_get('bitcache_cron', '')));
 
 define('BITCACHE_SERVER', variable_get('bitcache_server', TRUE));
 define('BITCACHE_TRANSFER_METHOD', variable_get('bitcache_transfer_method', 'read4k'));
-define('BITCACHE_URL',    url(BITCACHE_ALIAS . '/', array('absolute' => TRUE, 'prefix' => '', 'language' => array())));
+define('BITCACHE_URL',    url(BITCACHE_ALIAS . '/', array('absolute' => TRUE, 'prefix' => '', 'language' => (object)array())));
 define('BITCACHE_DEPTH',  variable_get('bitcache_depth', 0));
 define('BITCACHE_WIDTH',  variable_get('bitcache_width', 0));
 
