@@ -1,0 +1,507 @@
+<?php
+// $Id: lockdown.module,v 1.10 2009/06/29 02:21:38 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_init().
+ */
+function lockdown_init() {
+  foreach (array('token', 'messaging', 'rules') as $module) {
+    if (module_exists($module)) {
+      module_load_include('inc', 'lockdown', 'lockdown.' . $module);
+    }
+  }
+
+  if (module_exists('rules')) {
+    drupal_load('module', 'rules');
+    rules_invoke_event('lockdown_init');
+  }
+}
+
+/**
+ * Implementation of hook_exit().
+ */
+function lockdown_exit($destination = NULL) {
+  if (module_exists('rules')) {
+    drupal_load('module', 'rules');
+    rules_invoke_event('lockdown_exit');
+  }
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function lockdown_cron() {
+  // Anonymize IP addresses that have exceeded the data retention period:
+  if (lockdown_variable_get('ip_anon_policy', 0)) {
+    foreach (lockdown_get_ip_anon_tables() as $table => $columns) {
+      db_query("UPDATE {{$table}} SET {$columns['hostname']} = '%s' WHERE {$columns['timestamp']} < %d", '0.0.0.0', time() - (int)lockdown_variable_get('ip_anon_period_' . $table, 10800));
+    }
+  }
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function lockdown_help($path, $arg = NULL) {
+  switch ($path) {
+    case 'admin/settings/lockdown':
+      return '';
+    case 'admin/settings/lockdown/levels':
+      return '<p>' . t('Lockdown levels are a measure of the level of alertness and the general state of readiness to respond to threats posed by adversaries seeking to disrupt normal activities. Levels implement and enforce configurable policies and they can be activated automatically through <a href="@triggers">triggered rules</a>. The current alertness level is displayed in bold.', array('@triggers' => url('admin/rules/trigger'))) . '</p>';
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function lockdown_perm() {
+  return array(
+    'administer lockdown',
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function lockdown_menu() {
+  return array(
+    // Administer >> Site configuration >> Lockdown
+    'admin/settings/lockdown' => array(
+      'title' => 'Lockdown',
+      'description' => 'Settings for locking down the security of your Drupal site.',
+      'access arguments' => array('administer lockdown'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('lockdown_admin_settings'),
+      'file' => 'lockdown.admin.inc',
+    ),
+    'admin/settings/lockdown/configure' => array(
+      'title' => 'Configure',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    ),
+
+    // Administer >> Site configuration >> Lockdown >> Levels
+    'admin/settings/lockdown/levels' => array(
+      'title' => 'Levels',
+      'type' => MENU_LOCAL_TASK,
+      'access arguments' => array('administer lockdown'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('lockdown_admin_levels'),
+      'file' => 'lockdown.admin.inc',
+    ),
+    'admin/settings/lockdown/levels/create' => array(
+      'title' => 'Create lockdown level',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('administer lockdown'),
+      'page callback' => 'lockdown_admin_level_create',
+      'file' => 'lockdown.admin.inc',
+    ),
+    'admin/settings/lockdown/levels/edit' => array(
+      'title' => 'Configure lockdown level',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('administer lockdown'),
+      'page callback' => 'lockdown_admin_level_edit',
+      'file' => 'lockdown.admin.inc',
+    ),
+    'admin/settings/lockdown/levels/delete' => array(
+      'title' => 'Delete lockdown level',
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('administer lockdown'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('lockdown_admin_level_delete'),
+      'file' => 'lockdown.admin.inc',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function lockdown_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list':
+      return array(
+        'level' => array(
+          'info'   => t('Lockdown level'),
+          'region' => 'right',
+          'weight' => 10,
+          'cache'  => BLOCK_NO_CACHE,
+        ),
+        'data-retention' => array(
+          'info'   => t('Lockdown data retention policy'),
+          'region' => 'right',
+          'weight' => 10,
+          'cache'  => BLOCK_NO_CACHE,
+        ),
+      );
+
+    case 'configure':
+      switch ($delta) {
+        case 'level':
+          module_load_include('inc', 'lockdown', 'lockdown.admin');
+          return lockdown_admin_block_configure();
+      }
+      break;
+
+    case 'save':
+      switch ($delta) {
+        case 'level':
+          module_load_include('inc', 'lockdown', 'lockdown.admin');
+          return lockdown_admin_block_submit($edit);
+      }
+      break;
+
+    case 'view':
+      $block = array();
+      switch ($delta) {
+        case 'level':
+          $block['subject'] = t('Current lockdown level');
+          $block['content'] = theme('lockdown_level_block', lockdown_get_level_info());
+          break;
+        case 'data-retention':
+          $block['subject'] = t('Data retention policy');
+          $block['content'] = theme('lockdown_data_retention_block', lockdown_get_ip_anon_period());
+          break;
+      }
+      return $block;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function lockdown_form_alter(&$form, $form_state, $form_id) {
+  switch ($form_id) {
+    // Administer >> Site building >> Modules
+    case 'system_modules':
+      foreach (module_invoke_all('lockdown_modules') as $module) { // FIXME
+        unset(
+          $form['validation_modules']['#value'][$module],
+          $form['name'][$module],
+          $form['version'][$module],
+          $form['description'][$module],
+          $form['throttle'][$module],
+          $form['throttle']['#options'][$module],
+          $form['status']['#options'][$module]
+        );
+      }
+      break;
+
+    // Administer >> User management >> Permissions
+    case 'user_admin_perm':
+      // TODO
+      break;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// User API hooks
+
+/**
+ * Implementation of hook_user().
+ */
+function lockdown_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'form':
+      switch ($category) {
+        case 'account':
+          $form = array();
+          $form['account']['history_privacy'] = array(
+            '#type'          => 'checkbox',
+            '#title'         => t('Hide account age from anonymous visitors'),
+            '#default_value' => isset($edit['history_privacy']) ? $edit['history_privacy'] : FALSE,
+            '#description'   => t('Check this box if you wish to hide the "member for" information from anonymous visitors (including search engines).'),
+          );
+
+          if (variable_get('user_pictures', FALSE)) {
+            $form['picture']['picture_privacy'] = array(
+              '#type'          => 'checkbox',
+              '#title'         => t('Hide picture from anonymous visitors'),
+              '#default_value' => isset($edit['picture_privacy']) ? $edit['picture_privacy'] : FALSE,
+              '#description'   => t('Check this box if you wish to display your picture to other registered users but to hide it from anonymous visitors (including search engines).'),
+            );
+          }
+
+          return $form;
+      }
+      break;
+
+    case 'view':
+      // @see hook_profile_alter()
+      // Can't really do anything useful here, as our module weight is lower than user.module's.
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_profile_alter().
+ */
+function lockdown_profile_alter(&$account) {
+  global $user;
+
+  if (empty($user->uid)) {
+    // Hide the account age from anonymous visitors if the user has requested privacy:
+    if (!empty($account->history_privacy)) {
+      unset($account->content['summary']['member_for']);
+    }
+
+    // Hide the profile picture from anonymous visitors if the user has requested privacy:
+    if (!empty($account->picture_privacy)) {
+      unset($account->content['user_picture']);
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Theme API hooks
+
+/**
+ * Implementation of hook_theme().
+ */
+function lockdown_theme() {
+  return array(
+    'lockdown_level_block' => array(
+      'arguments' => array('level' => NULL),
+      'file'      => 'lockdown.admin.inc',
+    ),
+    'lockdown_data_retention_block' => array(
+      'arguments' => array('period' => NULL),
+      'file'      => 'lockdown.admin.inc',
+    ),
+    'lockdown_admin_settings' => array(
+      'arguments' => array('form' => NULL),
+      'file'      => 'lockdown.admin.inc',
+    ),
+    'lockdown_admin_levels' => array(
+      'arguments' => array('form' => NULL),
+      'file'      => 'lockdown.admin.inc',
+    ),
+    'lockdown_data_retention_settings' => array(
+      'arguments' => array('form' => NULL),
+      'file'      => 'lockdown.admin.inc',
+    ),
+  );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Lockdown API hooks
+
+/**
+ * Implementation of hook_lockdown_modules().
+ */
+function lockdown_lockdown_modules() {
+  return TRUE ? array() : array('lockdown'); // FIXME
+}
+
+/**
+ * Implementation of hook_lockdown_settings().
+ */
+function lockdown_lockdown_settings($op) {
+  switch ($op) {
+    case 'variables':
+      return array(
+        'maintenance' => array('site_offline', 'site_offline_message'),
+        'transport'   => array('securepages_secure', 'securepages_pages'),
+        'messaging'   => array(),
+        'retention'   => array('ip_anon_policy'),
+      );
+  }
+}
+
+/**
+ * Implementation of hook_lockdown_activate().
+ */
+function lockdown_lockdown_activate($level) {}
+
+/**
+ * Implementation of hook_lockdown_deactivate().
+ */
+function lockdown_lockdown_deactivate($level) {}
+
+//////////////////////////////////////////////////////////////////////////////
+// Lockdown API implementation
+
+/**
+ * Returns a configuration variable in the current lockdown level.
+ */
+function lockdown_variable_get($name, $default = NULL) {
+  if (($level = lockdown_get_level_info()) && isset($level->options[$name])) {
+    return $level->options[$name];
+  }
+  return variable_get($name, $default);
+}
+
+/**
+ * Updates a configuration variable in the current lockdown level.
+ */
+function lockdown_variable_set($name, $value) {
+  if (($level = lockdown_get_level_info())) {
+    $level->options[$name] = $value;
+    return db_query("UPDATE {lockdown_levels} SET options = '%s' WHERE name = '%s'", serialize($level->options), $level->name);
+  }
+  return variable_set($name, $value);
+}
+
+/**
+ * Returns the list of Lockdown levels configured by the administrator.
+ */
+function lockdown_get_levels($op = NULL) {
+  static $levels;
+  if (!is_array($levels)) {
+    $levels = array();
+    $result = db_query("SELECT * FROM {lockdown_levels} ORDER BY weight ASC, title ASC");
+    while ($level = db_fetch_object($result)) {
+      $level->options = unserialize($level->options);
+      $levels[$level->name] = (array)$level;
+      //$levels[$level->name]['runs when'] = $level->title;
+    }
+  }
+  return $op ? lockdown_map_to_property($levels, $op) : $levels;
+}
+
+/**
+ * Returns information on a lockdown level.
+ */
+function lockdown_get_level_info($name = NULL) {
+  $name = $name ? $name : lockdown_get_level();
+  if (($level = db_fetch_object(db_query("SELECT * FROM {lockdown_levels} WHERE name = '%s'", $name)))) {
+    $level->options = unserialize($level->options);
+    return $level;
+  }
+}
+
+/**
+ * Returns the name of the currently-active lockdown level.
+ */
+function lockdown_get_level($default = 'default') {
+  return variable_get('lockdown_level', $default);
+}
+
+/**
+ * Activates the named lockdown level, first deactivating the
+ * previously-active level.
+ */
+function lockdown_set_level($new_level) {
+  if (!($level = lockdown_get_level_info($new_level)))
+    return;
+
+  if (($changed = ($new_level != ($old_level = lockdown_get_level())))) {
+    module_invoke_all('lockdown_deactivate', $old_level);
+    if (module_exists('rules')) {
+      rules_invoke_event('lockdown_level_deactivate', $old_level);
+    }
+  }
+
+  variable_set('lockdown_level', $new_level);
+  variable_set('lockdown_options', $level->options);
+  if (!empty($level->options)) {
+    foreach ($level->options as $k => $v) {
+      variable_set($k, $v);
+    }
+  }
+  cache_clear_all('variables', 'cache');
+
+  if (module_exists('messaging') && $changed) {
+    lockdown_alert_admin('level');
+  }
+
+  module_invoke_all('lockdown_activate', $new_level);
+  if (module_exists('rules')) {
+    rules_invoke_event('lockdown_level_activate', $new_level);
+    rules_invoke_rule_set('lockdown_level_' . $new_level);
+  }
+}
+
+/**
+ * TODO
+ */
+function lockdown_get_admins($role = NULL) {
+  return array(user_load(1)); // FIXME
+}
+
+/**
+ * Returns the list of SQL tables in the current Drupal database.
+ */
+function lockdown_get_tables() {
+  $tables = array();
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      // TODO: Lockdown tables should be the very last in the list.
+      $result = db_query("SHOW TABLES");
+      while ($row = db_fetch_array($result)) {
+        $table = reset($row); // the first column
+        $tables[] = $table;
+      }
+      break;
+    case 'pgsql':
+    default:
+      // TODO: PostgreSQL support not implemented yet. Patches welcome.
+      break;
+  }
+  return $tables;
+}
+
+/**
+ * @see http://drupal.org/project/ip_anon
+ */
+function lockdown_get_ip_anon_tables() {
+  // Core modules
+  $columns = drupal_map_assoc(array('hostname', 'timestamp'));
+  $tables  = array('accesslog', 'comments', 'flood', 'sessions', 'watchdog');
+  $tables  = array_combine($tables, array_fill(0, count($tables), $columns));
+
+  // Webform integration
+  // @see http://drupal.org/node/469760
+  if (module_exists('webform')) {
+    $tables['webform_submissions'] = array(
+      'hostname'  => 'remote_addr',
+      'timestamp' => 'submitted',
+    );
+  }
+
+  drupal_alter('ip_anon', $tables);
+  foreach ($tables as $table => $columns) {
+    if (!db_table_exists($table)) {
+      unset($tables[$table]);
+    }
+  }
+  ksort($tables);
+  return $tables;
+}
+
+function lockdown_get_ip_anon_period() {
+  if (lockdown_variable_get('ip_anon_policy', 0)) { 
+    $periods = array();
+    foreach (array_keys(lockdown_get_ip_anon_tables()) as $table) {
+      $periods[] = (int)lockdown_variable_get('ip_anon_period_' . $table, 10800);
+    }
+    return max($periods);
+  }
+  return NULL;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Lockdown API helpers
+
+function lockdown_map_to_object($input, $key_property = NULL) {
+  $output = array();
+  foreach ($input as $k => &$v) {
+    if ($key_property) {
+      $v[$key_property] = $k;
+    }
+    $output[$k] = (object)$v;
+  }
+  return $output;
+}
+
+function lockdown_map_to_property($input, $property) {
+  $output = array();
+  foreach ($input as $k => &$v) {
+    $output[$k] = is_object($v) ? $v->$property : $v[$property];
+  }
+  return $output;
+}

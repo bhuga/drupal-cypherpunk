@@ -1,0 +1,84 @@
+// $Id: INSTALL.txt,v 1.2 2009/06/26 17:07:17 arto Exp $
+
+REQUIREMENTS
+------------
+This module requires Drupal 6.x and PHP 5.2.x (or newer).
+
+
+INSTALLATION
+------------
+
+  1. Copy all the module files into a subdirectory called
+     sites/all/modules/lockdown/ under your Drupal installation directory.
+
+  2. Go to [Administer >> Site building >> Modules] and enable the Lockdown
+     module. You will find it in the section labelled 'Security'. (Also
+     enable any of Lockdown's submodules that you find relevant.)
+
+  3. Go to [Administer >> User management >> Permissions] to configure the
+     module's permissions.
+
+     WARNING: Be careful to whom you give out the "administer lockdown"
+     privilege! Users with this permission can circumvent Lockdown's
+     security policies, so do be sure that you trust both their integrity
+     and competence.
+
+  4. Go to [Administer >> Site configuration >> Lockdown] to review and
+     change the module's configuration options.
+
+     By default, two lockdown levels have been created for you when
+     installing this module: 'Online' and 'Offline'. Feel free to delete
+     these if you wish to create customized lockdown levels. (Note that the
+     currently-active lockdown level can't be deleted, so if you wish to
+     delete the default lockdown levels, you must first create a new custom
+     level and activate it.)
+
+  5. If you have installed the Rules module (which is highly recommended),
+     go to [Administer >> Rules >> Rule sets] to configure the actions
+     executed when the lockdown level is changed. This module provides a
+     default rule set for each lockdown level that you create.
+
+     WARNING: Given that this module adds several powerful but potentially
+     dangerous Rules actions (including one to erase the Drupal database!),
+     you may wish to exercise a certain prudence in granting the "administer
+     rules" privilege to users.
+
+  6. (See README.txt for information on submitting bug reports.)
+
+
+SEE ALSO
+--------
+
+  * The Rules module unlocks the full power of Lockdown by enabling you to
+    configure conditionally-executed actions that can be triggered when
+    lockdown levels are activated and deactivated:
+
+    <http://drupal.org/project/rules>
+
+  * The Messaging Framework allows Lockdown alerts to be sent out using
+    XMPP, SMS or Twitter, in addition to e-mail:
+
+    <http://drupal.org/project/messaging>
+
+  * The OpenPGP and GnuPG modules provide PGP-compatible encryption for
+    Drupal's outgoing e-mails:
+
+    <http://drupal.org/project/openpgp>
+    <http://drupal.org/project/gnupg>
+
+  * The Bitcache distributed storage system makes it trivial to quickly and
+    securely disseminate data through a private network of Drupal sites:
+
+    <http://drupal.org/project/bitcache>
+
+  * The Secure Pages module ensures that important pages on your Drupal site
+    are always used only over an SSL-secured connection instead of plain old
+    unencrypted HTTP:
+
+    <http://drupal.org/project/securepages>
+
+  * The Password Policy module makes sure that the users of your Drupal site
+    use sufficiently strong passwords so as to lessen the threat of
+    inadvertent user account compromise:
+
+    <http://drupal.org/project/password_policy>

@@ -1,0 +1,104 @@
+<?php
+// $Id: lockdown.install,v 1.1 2009/06/25 01:15:20 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_enable().
+ */
+function lockdown_enable() {
+  watchdog('security', 'Lockdown module enabled.', array(), WATCHDOG_NOTICE);
+
+  drupal_set_message(t('Lockdown successfully installed. Please review the available <a href="@settings">configuration settings</a> and <a href="@permissions">user permissions</a>.', array('@settings' => url('admin/settings/lockdown'), '@permissions' => url('admin/user/permissions', array('fragment' => 'module-lockdown')))));
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function lockdown_disable() {
+  watchdog('security', 'Lockdown module disabled.', array(), WATCHDOG_WARNING);
+
+  if (module_exists('messaging')) {
+    lockdown_alert_admin('disable');
+  }
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function lockdown_install() {
+  drupal_install_schema('lockdown');
+
+  // Install the default lockdown levels
+  db_query("INSERT INTO {lockdown_levels} VALUES ('%s', '%s', '%s', %d, '%s')", 'online',  t('Online'),  t('The site is operating normally.'),     -1, serialize(array('site_offline' => 0)));
+  db_query("INSERT INTO {lockdown_levels} VALUES ('%s', '%s', '%s', %d, '%s')", 'offline', t('Offline'), t('The site is undergoing maintenance.'),  0, serialize(array('site_offline' => 1)));
+
+  variable_set('lockdown_level', variable_get('site_offline', 0) ? 'offline' : 'online');
+
+  // Ensure that the module is loaded sufficiently early in the bootstrap:
+  db_query("UPDATE {system} SET weight = %d WHERE name = '%s'", -90, 'lockdown');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function lockdown_uninstall() {
+  drupal_uninstall_schema('lockdown');
+
+  db_query("DELETE FROM {variable} WHERE name LIKE '%s_%%'", 'lockdown');
+  cache_clear_all('variables', 'cache');
+
+  watchdog('security', 'Lockdown module uninstalled.', array(), WATCHDOG_WARNING);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Schema API hooks
+
+/**
+ * Implementation of hook_schema().
+ */
+function lockdown_schema() {
+  return array(
+    'lockdown_levels' => array(
+      'description' => t("Stores Lockdown levels."),
+      'fields' => array(
+        'name' => array(
+          'description' => t("Level name (primary key)."),
+          'type'        => 'varchar',
+          'length'      => 64,
+          'not null'    => TRUE,
+        ),
+        'title' => array(
+          'description' => t("Level title."),
+          'type'        => 'varchar',
+          'length'      => 255,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+        'description' => array(
+          'description' => t("Level description."),
+          'type'        => 'varchar',
+          'length'      => 255,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+        'weight' => array(
+          'description' => t("Level weight ('-99' to '99')."),
+          'type'        => 'int',
+          'size'        => 'tiny',
+          'length'      => 4, // FIXME: PostgreSQL doesn't like this.
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'options' => array(
+          'description' => t("Level options (serialized PHP)."),
+          'type'        => 'text',
+          'size'        => 'normal',
+          'not null'    => TRUE,
+        ),
+      ),
+      'primary key' => array('name'),
+    ),
+  );
+}

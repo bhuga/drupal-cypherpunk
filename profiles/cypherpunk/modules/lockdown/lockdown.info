@@ -1,0 +1,10 @@
+; $Id: lockdown.info,v 1.2 2009/06/26 07:22:33 arto Exp $
+name = Lockdown
+description = Provides tools for further locking down the security of your Drupal site.
+package = Security
+recommends[] = rules
+recommends[] = messaging
+suggests[] = securepages
+replaces[] = ip_anon
+core = 6.x
+php = 5.2
