@@ -1,0 +1,22 @@
+/.htaccess/1.90.2.3/Wed Dec 10 20:04:08 2008//TDRUPAL-6
+/COPYRIGHT.txt/1.2.2.1/Wed Feb  6 12:45:55 2008//TDRUPAL-6
+/INSTALL.mysql.txt/1.10/Mon Nov 19 19:53:51 2007//TDRUPAL-6
+/INSTALL.pgsql.txt/1.7/Mon Nov 26 16:36:42 2007//TDRUPAL-6
+/INSTALL.txt/1.61.2.4/Wed Jul  9 19:15:59 2008//TDRUPAL-6
+/LICENSE.txt/1.5.4.1/Tue Jan  6 17:27:13 2009//TDRUPAL-6
+/MAINTAINERS.txt/1.19.2.2/Wed Apr 29 17:15:10 2009//TDRUPAL-6
+/UPGRADE.txt/1.12/Fri Jan  4 16:15:58 2008//TDRUPAL-6
+/cron.php/1.36/Wed Aug  9 07:42:55 2006//TDRUPAL-6
+/index.php/1.94/Wed Dec 26 08:46:48 2007//TDRUPAL-6
+/install.php/1.113.2.9/Mon Apr 27 10:50:35 2009//TDRUPAL-6
+/robots.txt/1.9.2.1/Wed Dec 10 20:12:19 2008//TDRUPAL-6
+/update.php/1.252.2.3/Mon Mar 30 11:15:11 2009//TDRUPAL-6
+/xmlrpc.php/1.15/Sat Dec 10 19:26:47 2005//TDRUPAL-6
+D/includes////
+D/misc////
+D/modules////
+D/profiles////
+D/scripts////
+D/sites////
+D/themes////
+/CHANGELOG.txt/1.253.2.32/Wed Jul  1 22:03:52 2009//TDRUPAL-6
