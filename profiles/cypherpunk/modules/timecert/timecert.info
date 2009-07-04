@@ -1,0 +1,6 @@
+; $Id: timecert.info,v 1.1 2009/05/16 22:31:43 arto Exp $
+name = TimeCert
+description = Timestamps content using a trusted third-party web service.
+;package = Other
+core = 6.x
+php = 5.2

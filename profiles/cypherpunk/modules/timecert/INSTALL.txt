@@ -1,0 +1,40 @@
+// $Id: INSTALL.txt,v 1.2 2009/05/20 00:16:39 arto Exp $
+
+REQUIREMENTS
+------------
+This module requires Drupal 6.x and PHP 5.2.x (or newer).
+
+
+INSTALLATION
+------------
+
+  1. Copy all the module files into a subdirectory called
+     sites/all/modules/timecert/ under your Drupal installation directory.
+
+  2. Go to [Administer >> Site building >> Modules] and enable the TimeCert
+     module. You will find it in the section labelled "Other".
+
+  3. Go to [Administer >> Site configuration >> TimeCert] to review and
+     change the configuration options to your liking.
+
+  4. Run Drupal's cron maintenance task (e.g. http://example.org/cron.php)
+     to timestamp already existing content. You may need to run this
+     multiple times until all content has been timestamped.
+
+     Alternatively, you can just let content (of the TimeCert-enabled
+     content types configured in the previous step) get timestamped the
+     first time that it is viewed.
+
+  5. (See README.txt for information on submitting bug reports.)
+
+
+SEE ALSO
+--------
+
+  * For evidential and verification purposes it may be useful to keep an
+    easily-accessible permanent archive of the input data to the timestamped
+    digest. Therefore the module integrates with the Bitcache data storage
+    system (if installed) for purposes of storing the input texts to the
+    SHA-1 hash algorithm used in computing the timestamped digests.
+
+    <http://drupal.org/project/bitcache>

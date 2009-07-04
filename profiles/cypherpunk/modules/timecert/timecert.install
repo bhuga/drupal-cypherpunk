@@ -1,0 +1,68 @@
+<?php
+// $Id: timecert.install,v 1.1 2009/05/16 22:31:43 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_enable().
+ */
+function timecert_enable() {
+  drupal_set_message(t('TimeCert successfully installed. Please review the available <a href="@settings">configuration settings</a>.', array('@settings' => url('admin/settings/timecert'))));
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function timecert_install() {
+  drupal_install_schema('timecert');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function timecert_uninstall() {
+  drupal_uninstall_schema('timecert');
+
+  db_query("DELETE FROM {variable} WHERE name LIKE '%s_%%'", 'timecert');
+  cache_clear_all('variables', 'cache');
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Schema API hooks
+
+/**
+ * Implementation of hook_schema().
+ */
+function timecert_schema() {
+  return array(
+    // TimeCert data
+    'timecert_nodes' => array(
+      'description' => t("Stores TimeCert data."),
+      'fields' => array(
+        'nid' => array(
+          'description' => t("The node ID from {node}.nid."),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'vid' => array(
+          'description' => t("The node revision ID from {node_revisions}.vid."),
+          'type'        => 'int',
+          'unsigned'    => TRUE,
+          'not null'    => TRUE,
+          'default'     => 0,
+        ),
+        'sha1' => array(
+          'description' => t("The SHA-1 digital fingerprint of the node's content."),
+          'type'        => 'char',
+          'length'      => 40,
+          'not null'    => TRUE,
+          'default'     => '',
+        ),
+      ),
+      'primary key' => array('nid', 'vid'),
+    ),
+  );
+}

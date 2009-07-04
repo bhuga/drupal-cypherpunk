@@ -1,0 +1,179 @@
+<?php
+// $Id: timecert.module,v 1.5 2009/05/20 00:54:00 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Module settings
+
+define('TIMECERT_URL', 'http://timecert.org');
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_help().
+ */
+function timecert_help($path, $arg = NULL) {
+  switch ($path) {
+    case 'admin/settings/timecert':
+      return '<p>' . theme('image', drupal_get_path('module', 'timecert') . '/timecert.png', t('TimeCert'), t('TimeCert'), array('align' => 'right', 'style' => 'margin: 0px 0px 10px 10px;')) . t('<a href="http://timecert.org/" target="_blank">TimeCert</a> is a web service for timestamping content. This provides evidence by a trusted third-party that something (e.g. a blog post, a document, or a file) existed at a given time. TimeCert records and gives you the timestamp for when someone first referenced a given digital fingerprint.') . '</p>';
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function timecert_menu() {
+  return array(
+    // Administer >> Site configuration >> TimeCert
+    'admin/settings/timecert' => array(
+      'title' => 'TimeCert',
+      'description' => 'Settings for timestamping Drupal content.',
+      'access arguments' => array('administer site configuration'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('timecert_admin_settings'),
+      'file' => 'timecert.admin.inc',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function timecert_theme() {
+  return array(
+    'timecert_iframe' => array(
+      'arguments' => array('sha1' => NULL),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function timecert_cron() {
+  // Iteratively timestamp all old content:
+  $types  = timecert_get_node_types();
+  $result = db_query_range("SELECT n.nid FROM {node} n LEFT JOIN {timecert_nodes} tn ON n.nid = tn.nid WHERE n.status = 1 AND n.type IN (" . db_placeholders($types, 'varchar') . ") AND tn.nid IS NULL ORDER BY n.nid ASC", $types, 0, variable_get('timecert_cron_limit', 50));
+  while ($node = db_fetch_object($result)) {
+    $node = node_load((int)$node->nid);
+
+    if ($sha1 = timecert_get_node_digest($node)) {
+      db_query("INSERT INTO {timecert_nodes} (nid, vid, sha1) VALUES (%d, %d, '%s')", $node->nid, $node->vid, $sha1);
+      timecert_get_timestamp($sha1, timecert_get_node_url($node));
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Node API hooks
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function timecert_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'insert':
+      if (array_search($node->type, timecert_get_node_types())) {
+        $sha1 = timecert_get_node_digest($node, TRUE);
+        db_query("INSERT INTO {timecert_nodes} (nid, vid, sha1) VALUES (%d, %d, '%s')", $node->nid, $node->vid, $sha1);
+        timecert_get_timestamp($sha1, timecert_get_node_url($node));
+      }
+      break;
+
+    case 'update':
+      if (array_search($node->type, timecert_get_node_types())) {
+        $sha1 = timecert_get_node_digest($node, TRUE);
+        !empty($node->revision) ? // a new revision is being created
+          db_query("INSERT INTO {timecert_nodes} (nid, vid, sha1) VALUES (%d, %d, '%s')", $node->nid, $node->vid, $sha1) :
+          db_query("UPDATE {timecert_nodes} SET sha1 = '%s' WHERE nid = %d AND vid = %d", $sha1, $node->nid, $node->vid);
+        timecert_get_timestamp($sha1, timecert_get_node_url($node));
+      }
+      break;
+
+    case 'delete revision':
+      db_query("DELETE FROM {timecert_nodes} WHERE nid = %d AND vid = %d", $node->nid, $node->vid);
+      break;
+
+    case 'delete':
+      db_query("DELETE FROM {timecert_nodes} WHERE nid = %d", $node->nid);
+      break;
+
+    case 'view':
+      if (array_search($node->type, timecert_get_node_types())) {
+        if (($sha1 = timecert_get_node_digest($node))) {
+          $node->content['timecert'] = array(
+            '#value'  => theme('timecert_iframe', $sha1),
+            '#weight' => variable_get('timecert_iframe_weight', 99),
+          );
+        }
+      }
+      break;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// TimeCert API implementation
+
+function timecert_get_digest($data) {
+  return sha1(is_array($data) ? implode("\n", $data) . "\n" : (string)$data);
+}
+
+function timecert_get_timestamp($sha1, $referrer = NULL, array $headers = array()) {
+  if (!empty($referrer)) {
+    $headers['Referer'] = $referrer;
+  }
+  if (($result = drupal_http_request(TIMECERT_URL . '/' . $sha1 . '.time', $headers)) && empty($result->error)) {
+    // The timestamp is returned in the format "Mon Apr 17 19:34:46 UTC 2006"
+    return strtotime($result->data);
+  }
+}
+
+function timecert_get_node_types() {
+  return array_filter(variable_get('timecert_node_types', array()), 'is_string');
+}
+
+function timecert_get_node_digest($node, $refresh = FALSE) {
+  if (!$refresh && ($sha1 = db_result(db_query("SELECT sha1 FROM {timecert_nodes} WHERE nid = %d AND vid = %d", $node->nid, $node->vid)))) {
+    return $sha1;
+  }
+
+  $data = timecert_get_node_data($node);
+  $sha1 = timecert_get_digest($data);
+
+  // Store the pre-digest data in a Bitcache repository, if so configured:
+  if (module_exists('bitcache') && ($repository = variable_get('timecert_bitcache_repository', ''))) {
+    bitcache_use_repository($repository);
+    bitcache_put($sha1, $data);
+    bitcache_use_repository();
+  }
+
+  return $sha1;
+}
+
+function timecert_get_node_data($node) {
+  switch (variable_get('timecert_digest_type', 'url')) {
+    case 'url':
+      return timecert_get_node_url($node);
+    case 'content':
+      return NULL; // TODO
+  }
+}
+
+function timecert_get_node_url($node) {
+  global $language;
+  return url('node/' . $node->nid, array(
+    'absolute' => TRUE,
+    'language' => $language,
+  ));
+}
+
+function theme_timecert_iframe($sha1, array $options = array()) {
+  drupal_add_css(drupal_get_path('module', 'timecert') . '/timecert.css');
+
+  $options['src'] = TIMECERT_URL . '/' . $sha1 . '.iframe';
+  if (!isset($options['class']))  $options['class']  = 'timecert';
+  if (!isset($options['width']))  $options['width']  = '450px';
+  if (!isset($options['height'])) $options['height'] = '30px';
+
+  return '<iframe' . drupal_attributes($options) . '></iframe>';
+}
