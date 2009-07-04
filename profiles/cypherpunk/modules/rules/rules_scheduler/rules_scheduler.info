@@ -1,0 +1,6 @@
+; $Id: rules_scheduler.info,v 1.1.2.1 2008/08/14 11:29:48 fago Exp $
+name = Rules Scheduler
+description = Schedule the execution of rule sets.
+dependencies[] = rules
+package = Rules
+core = 6.x
