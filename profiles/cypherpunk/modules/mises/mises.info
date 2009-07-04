@@ -1,0 +1,5 @@
+; $Id: mises.info,v 1.1 2009/06/29 19:35:40 arto Exp $
+name = Mises.org
+description = Syndicates content from the <a href="http://mises.org/" target="_blank">Ludwig von Mises Institute</a>.
+core = 6.x
+php = 5.0

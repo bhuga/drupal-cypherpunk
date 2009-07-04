@@ -1,0 +1,299 @@
+<?php
+// $Id: mises.module,v 1.3 2009/06/30 03:13:31 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Module settings
+
+define('MISES_URL', 'http://mises.org');
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_block().
+ */
+function mises_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list':
+      return array(
+        'quote' => array(
+          'info'   => t('Mises.org random quote'),
+          'region' => 'right',
+          'cache'  => BLOCK_NO_CACHE,
+        ),
+        'animator' => array(
+          'info'   => t('Mises.org headline animator'),
+          'region' => 'right',
+          'cache'  => BLOCK_CACHE_GLOBAL,
+        ),
+        'banner' => array(
+          'info'   => t('Mises.org banner ad'),
+          'region' => 'right',
+          'cache'  => BLOCK_CACHE_GLOBAL,
+        ),
+        'events' => array(
+          'info'   => t('Mises.org upcoming events'),
+          'region' => 'right',
+          'cache'  => BLOCK_NO_CACHE,
+        ),
+        'daily' => array(
+          'info'   => t('Mises.org daily articles'),
+          'region' => 'right',
+          'cache'  => BLOCK_NO_CACHE,
+        ),
+        'blog' => array(
+          'info'   => t('Mises.org blog posts'),
+          'region' => 'right',
+          'cache'  => BLOCK_NO_CACHE,
+        ),
+      );
+
+    case 'configure':
+      $form['mises'] = array('#tree' => TRUE);
+      $form['mises']['link_target'] = array(
+        '#title'         => t('Link target'),
+        '#type'          => 'select',
+        '#default_value' => variable_get('mises_link_target_' . $delta, ''),
+        '#options'       => array('' => t('Same window or tab'), '_blank' => t('New window or tab')),
+        '#description'   => t('The browser behavior when clicking on generated links to <a href="@mises" target="_blank">Mises.org</a>.', array('@mises' => url(MISES_URL))),
+      );
+      switch ($delta) {
+        case 'quote':
+          $form['mises']['template'] = array(
+            '#title'         => t('Quote template'),
+            '#type'          => 'textarea',
+            '#default_value' => mises_get_quote_template(),
+            '#rows'          => 3,
+            '#description'   => t('Override the HTML template used to display quotes in this block.'),
+          );
+          break;
+        case 'banner':
+          break; // TODO: select specific banner.
+        case 'events':
+        case 'daily':
+        case 'blog':
+          $form['mises']['feed_items'] = array(
+            '#title'         => t('Displayed items'),
+            '#type'          => 'select',
+            '#default_value' => variable_get('mises_feed_items_' . $delta, 5),
+            '#options'       => drupal_map_assoc(range(1, 10), '_mises_items'),
+            '#description'   => t('The maximum number of feed items displayed in the block.'),
+          );
+          break;
+      }
+      if (!in_array($delta, array('animator', 'banner'))) {
+        $form['mises']['cache_lifetime'] = array(
+          '#title'         => t('Cache lifetime'),
+          '#type'          => 'select',
+          '#default_value' => variable_get('mises_cache_lifetime_' . $delta, ($delta == 'quote' ? 900 : 3600)),
+          '#options'       => array(0 => t('<none>')) + drupal_map_assoc(array(900, 1800, 3600, 10800, 21600, 32400, 43200, 86400, 172800, 259200, 604800), 'format_interval'),
+          '#description'   => t('The duration that the block contents will be cached for before being re-fetched.'),
+        );
+      }
+      return $form;
+
+    case 'save':
+      foreach ($edit['mises'] as $k => $v) {
+        variable_set('mises_' . $k . '_' . $delta, $v);
+      }
+      break;
+
+    case 'view':
+      $block = array();
+      switch ($delta) {
+        // Quote
+        case 'quote':
+          if (($quote = mises_get_quote())) {
+            $block['subject'] = t('Mises.org random quote');
+            $block['content'] = theme('mises_quote', $quote, variable_get('mises_link_target_' . $delta, ''));
+          }
+          break;
+
+        // Banners
+        case 'animator':
+          $block['subject'] = '';
+          $block['content'] = theme('mises_banner', (object)array(
+            'title' => t('Mises.org Daily Articles'),
+            'link'  => 'http://feeds.feedburner.com/~r/MisesDailyArticles/~6/1',
+            'image' => 'http://feeds.feedburner.com/MisesDailyArticles.1.gif',
+          ), variable_get('mises_link_target_' . $delta, ''));
+          break;
+        case 'banner':
+          $block['subject'] = '';
+          $block['content'] = theme('mises_banner', (object)array(
+            'title' => t('Mises.org'),
+            'link'  => mises_get_url(),
+            'image' => mises_get_banner_url('banner'),
+          ), variable_get('mises_link_target_' . $delta, ''));
+          break;
+
+        // Feeds
+        case 'events':
+          $block['subject'] = t('Mises.org upcoming events');
+          $block['content'] = theme('mises_feed',
+            mises_get_events(variable_get('mises_feed_items_' . $delta, 5)),
+            variable_get('mises_link_target_' . $delta, '')
+          );
+          break;
+        case 'daily':
+          $block['subject'] = t('Mises.org daily articles');
+          $block['content'] = theme('mises_feed',
+            mises_get_daily_articles(variable_get('mises_feed_items_' . $delta, 5)),
+            variable_get('mises_link_target_' . $delta, '')
+          );
+          break;
+        case 'blog':
+          $block['subject'] = t('Mises.org blog posts');
+          $block['content'] = theme('mises_feed',
+            mises_get_blog_posts(variable_get('mises_feed_items_' . $delta, 5)),
+            variable_get('mises_link_target_' . $delta, '')
+          );
+          break;
+      }
+      return $block;
+  }
+}
+
+/**
+ * Implementation of hook_flush_caches().
+ */
+function mises_flush_caches() {
+  return array('cache_mises');
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Theme API hooks
+
+/**
+ * Implementation of hook_theme().
+ */
+function mises_theme() {
+  return array(
+    'mises_quote' => array(
+      'arguments' => array('quote' => NULL, 'target' => ''),
+    ),
+    'mises_banner' => array(
+      'arguments' => array('banner' => NULL, 'target' => ''),
+    ),
+    'mises_feed' => array(
+      'arguments' => array('items' => NULL, 'target' => ''),
+    ),
+    'mises_feed_item' => array(
+      'arguments' => array('item' => NULL, 'target' => ''),
+    ),
+  );
+}
+
+function theme_mises_quote($quote, $target = '') {
+  $tokens = array();
+  foreach ($quote as $k => $v) {
+    $tokens["[$k]"] = $v;
+  }
+  return str_replace(array_keys($tokens), array_values($tokens), mises_get_quote_template(TRUE));
+}
+
+function theme_mises_banner($banner, $target = '') {
+  $output = '<img src="' . $banner->image . '" width="468" height="60" style="border: 0;" alt=""/>';
+  return l($output, $banner->link, array('html' => TRUE, 'attributes' => array('target' => $target)));
+}
+
+function theme_mises_feed($items, $target = '') {
+  $output = array();
+  foreach ($items as $item) {
+    $output[] = theme('mises_feed_item', $item, $target);
+  }
+  return !empty($output) ? theme('item_list', $output) : '';
+}
+
+function theme_mises_feed_item($item, $target = '') {
+  return l($item->title, $item->link, array('html' => FALSE, 'attributes' => array('target' => $target))) .
+    (empty($item->date) ? '' : '<br/><small>' . format_date($item->date, 'custom', 'l, F j, Y') . '</small>');
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Mises API implementation
+
+function mises_get_url($path = '') {
+  return MISES_URL . '/' . $path;
+}
+
+function mises_get_quote() {
+  $response = mises_fetch_url(mises_get_quote_url(), variable_get('mises_cache_lifetime_quote', 900));
+  if (!isset($response->error)) {
+    if (preg_match('!<a target="[^"]+" href="([^"]+)">\s*([^:]+):</a>\s*"([^"]+)"\s*-\s*<a target="[^"]+" href="([^"]+)">([^<]+)</a>!', $response->data, $matches)) {
+      return array_combine(array('author-url', 'author-name', 'quote', 'book-url', 'book-title'), array_slice($matches, 1));
+    }
+  }
+}
+
+function mises_get_quote_url() {
+  return variable_get('mises_url_quote', mises_get_url('quote.aspx'));
+}
+
+function mises_get_quote_template($customized = TRUE) {
+  static $template = '"[quote]"<br/>&mdash; <a href="[author-url]" target="[target]">[author-name]</a>, <a href="[book-url]" target="[target]">[book-title]</a>';
+  return $customized ? variable_get('mises_template_quote', $template) : $template;
+}
+
+function mises_get_banner_url($banner = 'banner', $format = 'gif') {
+  return mises_get_url('images3/' . $banner . '.' . $format);
+}
+
+function mises_get_blog_posts($max = NULL) {
+  $items = mises_fetch_feed('http://blog.mises.org/blog/index.xml', variable_get('mises_cache_lifetime_blog', 3600));
+  return $max ? array_slice($items, 0, $max) : $items;
+}
+
+function mises_get_daily_articles($max = NULL) {
+  $items = mises_fetch_feed(mises_get_url('dailyarticles.xml'), variable_get('mises_cache_lifetime_daily', 3600));
+  return $max ? array_slice($items, 0, $max) : $items;
+}
+
+function mises_get_events($max = NULL) {
+  $items = array();
+  foreach (mises_fetch_feed(mises_get_url('events.xml'), variable_get('mises_cache_lifetime_events', 3600)) as $url => $item) {
+    if (!empty($item->updated) && ($timestamp = strtotime($item->updated))) {
+      $item->date = $timestamp;
+    }
+    $items[$url] = $item;
+  }
+  return $max ? array_slice($items, 0, $max) : $items;
+}
+
+function mises_fetch_feed($url, $ttl = 3600) {
+  $response = mises_fetch_url($url, $ttl);
+  return !isset($response->error) ? mises_parse_feed($response->data) : array();
+}
+
+function mises_parse_feed($data) {
+  $items = array();
+  if (($xml = simplexml_load_string($data))) {
+    $prefixes = $xml->getNamespaces(TRUE);
+    foreach ($xml->channel->item as $rss_item) {
+      $item = (object)((array)$rss_item);
+      foreach ($prefixes as $ns => $ns_uri) {
+        foreach ($rss_item->children($ns_uri) as $k => $v) {
+          if (!isset($item->$k)) {
+            $item->$k = (string)$v;
+          }
+        }
+      }
+      $item->title = html_entity_decode($item->title); // fix double-quoted titles
+      $items[$item->link] = $item;
+    }
+  }
+  return $items;
+}
+
+function mises_fetch_url($url, $ttl = 3600) {
+  if (!empty($ttl) && ($cached = cache_get($url, 'cache_mises'))) {
+    return $cached->data;
+  }
+  $response = drupal_http_request($url, array('User-Agent' => 'User-Agent: Drupal (+http://drupal.org/project/mises)'));
+  cache_set($url, $response, 'cache_mises', time() + $ttl);
+  return $response;
+}
+
+function _mises_items($count) {
+  return format_plural($count, '1 item', '@count items');
+}

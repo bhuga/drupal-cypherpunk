@@ -1,0 +1,20 @@
+// $Id: INSTALL.txt,v 1.1 2009/06/29 19:35:40 arto Exp $
+
+REQUIREMENTS
+------------
+This module requires Drupal 6.x and PHP 5.x (or newer).
+
+
+INSTALLATION
+------------
+
+  1. Copy all the module files into a subdirectory called
+     sites/all/modules/mises/ under your Drupal installation directory.
+
+  2. Go to [Administer >> Site building >> Modules] and enable the Mises.org
+     module. You will find it in the section labelled 'Other'.
+
+  3. Go to [Administer >> Site building >> Blocks] to review and configure
+     the available Mises.org blocks.
+
+  4. (See README.txt for information on submitting bug reports.)

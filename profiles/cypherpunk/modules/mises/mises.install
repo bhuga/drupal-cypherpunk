@@ -1,0 +1,42 @@
+<?php
+// $Id: mises.install,v 1.1 2009/06/29 19:35:40 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_enable().
+ */
+function mises_enable() {
+  drupal_set_message(t('Mises.org syndication tools successfully installed. Proceed to configure the available <a href="@blocks">blocks</a>.', array('@blocks' => url('admin/build/block'))));
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function mises_install() {
+  drupal_install_schema('mises');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function mises_uninstall() {
+  drupal_uninstall_schema('mises');
+
+  db_query("DELETE FROM {variable} WHERE name LIKE '%s_%%'", 'mises');
+  cache_clear_all('variables', 'cache');
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Schema API hooks
+
+/**
+ * Implementation of hook_schema().
+ */
+function mises_schema() {
+  $schema = array();
+  $schema['cache_mises'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_mises']['description'] = t('Cache table for Mises.org feeds.');
+  return $schema;
+}
