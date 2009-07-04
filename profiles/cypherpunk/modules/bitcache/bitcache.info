@@ -1,0 +1,5 @@
+; $Id: bitcache.info,v 1.4 2009/02/02 07:06:16 arto Exp $
+name = Bitcache
+description = Provides a distributed, content-addressable repository for data storage.
+core = 6.x
+php = 5.2
