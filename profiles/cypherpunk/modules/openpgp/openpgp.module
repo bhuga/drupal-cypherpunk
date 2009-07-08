@@ -1,0 +1,311 @@
+<?php
+// $Id: openpgp.module,v 1.1 2009/07/08 18:17:34 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_perm().
+ */
+function openpgp_perm() {
+  return array(
+    'administer OpenPGP configuration',
+    'administer OpenPGP keys',
+    'access OpenPGP keys',
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function openpgp_menu() {
+  return array(
+    // Administer >> Site configuration >> Cryptography
+    'admin/settings/openpgp' => array(
+      'title' => 'Cryptography',
+      'description' => 'Settings for OpenPGP cryptography.',
+      'access arguments' => array('administer OpenPGP configuration'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('openpgp_admin_settings'),
+      'file' => 'openpgp.admin.inc',
+    ),
+    // Administer >> User management >> Public keys
+    'admin/user/openpgp' => array(
+      'title' => 'Public keys',
+      'description' => 'Manage the OpenPGP public keys of your users.',
+      'access arguments' => array('administer OpenPGP keys'),
+      'page callback' => 'openpgp_admin_users',
+      'file' => 'openpgp.admin.inc',
+    ),
+    // My account >> Download OpenPGP key
+    'user/%user/openpgp' => array(
+      'type' => MENU_CALLBACK,
+      'access arguments' => array('access OpenPGP keys'),
+      'page callback' => 'openpgp_output_user_key',
+      'page arguments' => array(1),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function openpgp_theme() {
+  return array(
+    'openpgp_key_block' => array(
+      'arguments' => array('text' => NULL, 'account' => NULL),
+    ),
+  );
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// User API hooks
+
+/**
+ * Implementation of hook_user().
+ */
+function openpgp_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'validate':
+      return openpgp_user_validate($edit, $account, $category);
+    case 'submit':
+      return openpgp_user_submit($edit, $account, $category);
+    case 'form':
+      return openpgp_user_form($edit, $account, $category);
+  }
+}
+
+/**
+ * Implementation of hook_user('validate').
+ */
+function openpgp_user_validate(&$edit, &$account, $category = NULL) {
+  if ($category != NULL && ($field = openpgp_get_profile_field()) && $category == $field->category) {
+    if (isset($edit[$field->name])) {
+      if (($key_ascii = $edit[$field->name] = trim($edit[$field->name]))) {
+        if (!($key_binary = openpgp_unarmor($key_ascii))) {
+          form_set_error($field->name, t('Invalid OpenPGP key. Enter an ASCII-armored key beginning with <tt>-----BEGIN PGP PUBLIC KEY BLOCK-----</tt> and ending with <tt>-----END PGP PUBLIC KEY BLOCK-----</tt>'));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_user('submit').
+ */
+function openpgp_user_submit(&$edit, &$account, $category = NULL) {
+  if ($category != NULL && ($field = openpgp_get_profile_field()) && $category == $field->category) {
+    if (isset($edit[$field->name])) {
+      $key = openpgp_get_user_key($edit);
+      $edit['openpgp_key_id']          = $key ? $key->key_id      : NULL;
+      $edit['openpgp_key_fingerprint'] = $key ? $key->fingerprint : NULL;
+    }
+  }
+}
+
+/**
+ * Implementation of hook_user('form').
+ */
+function openpgp_user_form(&$edit, &$account, $category = NULL) {
+  switch ($category) {
+    case 'account':
+      $form = array();
+      if (($encrypt = variable_get('openpgp_mail_encrypt', '')) != '') {
+        if (!module_exists('contact')) {
+          $form['contact'] = array(
+            '#type'          => 'fieldset',
+            '#title'         => t('Contact settings'),
+            '#weight'        => 5,
+            '#collapsible'   => TRUE,
+          );
+        }
+        $form['contact']['openpgp_mail_encrypt'] = array(
+          '#type'          => 'checkbox',
+          '#title'         => t('Encrypt e-mail sent to me (when possible)'),
+          '#default_value' => ($encrypt == 'always') ? 1 : (isset($edit['openpgp_mail_encrypt']) ? $edit['openpgp_mail_encrypt'] : 1),
+          '#description'   => t('Check this box if you prefer to receive <a href="@openpgp" target="_blank">OpenPGP</a>-compatible encrypted e-mails.', array('@openpgp' => 'http://drupal.org/project/openpgp')),
+          '#disabled'      => ($encrypt == 'always'),
+        );
+      }
+      return $form;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter('user_profile_form').
+ */
+function openpgp_form_user_profile_form_alter(&$form, $form_state, $form_id = 'user_profile_form') {
+  if (($category = $form['_category']['#value']) == openpgp_get_profile_category()) {
+    // TODO: set field description if it doesn't already have any?
+  }
+}
+
+/**
+ * Implementation of hook_profile_alter().
+ */
+function openpgp_profile_alter(&$account) {
+  if (($field = openpgp_get_profile_field()) && isset($account->content[$field->category])) {
+    $form = &$account->content[$field->category];
+
+    if (!user_access('access OpenPGP keys')) {
+      unset($form[$field->name]);
+    }
+    else if (isset($form[$field->name]) && isset($account->{$field->name})) {
+      $form[$field->name]['#value'] = theme('openpgp_key_block', $account->{$field->name}, $account);
+      $form[$field->name]['#title'] .= ' <small>(' . l(t('download'), 'user/' . $account->uid . '/openpgp') . ')</small>';
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Mail API hooks
+
+/**
+ * Implementation of hook_mail_alter().
+ */
+function openpgp_mail_alter(&$message) {
+  if (($encrypt = variable_get('openpgp_mail_encrypt', '')) != '') {
+    if (is_object($account = @$message['params']['recipient'])) {
+      // TODO: put code back in here once the GnuPG submodule is ready to roll.
+    }
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Lockdown API hooks
+
+/**
+ * Implementation of hook_lockdown_settings().
+ */
+function openpgp_lockdown_settings($op) {
+  switch ($op) {
+    case 'variables':
+      return array('messaging' => array('openpgp_mail_encrypt'));
+
+    case 'form':
+      module_load_include('inc', 'openpgp', 'openpgp.admin');
+      $form = openpgp_admin_settings();
+      return array('openpgp_mail_encrypt' => $form['mail']['openpgp_mail_encrypt']);
+
+    case 'validate':
+      break;
+  }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// OpenPGP API implementation
+
+function openpgp_get_user_key($account = NULL) {
+  if (($field = openpgp_get_profile_field_name())) {
+    $account = (object)($account ? $account : $GLOBALS['user']);
+    return !empty($account->$field) ? openpgp_get_public_key_packet(openpgp_parse($account->$field)) : NULL;
+  }
+}
+
+function openpgp_get_profile_category() {
+  return ($field = openpgp_get_profile_field()) ? $field->category : NULL;
+}
+
+function openpgp_get_profile_field() {
+  return db_fetch_object(db_query("SELECT * FROM {profile_fields} WHERE name = '%s'", openpgp_get_profile_field_name()));
+}
+
+function openpgp_get_profile_field_name() {
+  return variable_get('openpgp_profile_field', '');
+}
+
+function openpgp_get_profile_fields() {
+  $fields = array();
+  $result = db_query("SELECT * FROM {profile_fields} WHERE type = 'textarea' ORDER BY category, weight");
+  while ($field = db_fetch_object($result)) {
+    $fields[$field->category][$field->name] = "{$field->title} ({$field->name})";
+  }
+  return $fields;
+}
+
+function openpgp_get_provider_class($name = 'openpgp_gpg') {
+  if (($provider = openpgp_get_provider($name))) {
+    // TODO
+  }
+}
+
+function openpgp_get_provider($name = 'openpgp_gpg') {
+  $providers = openpgp_get_providers();
+  return isset($providers[$name]) ? $providers[$name] : NULL;
+}
+
+function openpgp_get_providers() {
+  return module_invoke_all('openpgp_providers');
+}
+
+function openpgp_get_public_key_id($msg) {
+  return ($packet = openpgp_get_public_key_packet($msg)) ? $packet->key_id : FALSE;
+}
+
+function openpgp_get_public_key_packet($msg) {
+  return openpgp_get_packet($msg, 'OpenPGP_PublicKeyPacket');
+}
+
+function openpgp_get_packet($msg, $packet_class) {
+  module_load_include('inc', 'openpgp', 'openpgp');
+
+  if ($msg instanceof OpenPGP_Message) {
+    foreach ($msg as $packet) {
+      if ($packet instanceof $packet_class) {
+        return $packet;
+      }
+    }
+  }
+}
+
+function openpgp_parse($input) {
+  module_load_include('inc', 'openpgp', 'openpgp');
+
+  if (strpos($input = (string)$input, '-----BEGIN') !== FALSE) {
+    if (!($input = openpgp_unarmor($input))) {
+      return FALSE; // unarmoring failed
+    }
+  }
+  return OpenPGP_Message::parse($input);
+}
+
+function openpgp_unarmor($ascii) {
+  module_load_include('inc', 'openpgp', 'openpgp');
+
+  return OpenPGP::unarmor($ascii);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Theme callbacks
+
+/**
+ * Theme callback: Output an OpenPGP key block.
+ */
+function theme_openpgp_key_block($text, $account = NULL) {
+  // Wrap the OpenPGP key block in <pre>...</pre> tags to ensure it is
+  // displayed using an appropriate fixed-width font:
+  return '<div class="openpgp key">' . "<pre>\n" . check_plain($text) . "\n</pre></div>"; // TODO: RDFa
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Menu callbacks
+
+/**
+ * Menu callback: Output a user's OpenPGP key in ASCII-armored format.
+ */
+function openpgp_output_user_key($account, $action = 'download') {
+  if (in_array($action, array('download', 'view')) && ($field = openpgp_get_profile_field_name()) && isset($account->$field)) {
+    $key_ascii = $account->$field;
+
+    // @see http://tools.ietf.org/html/rfc3156#section-7
+    drupal_set_header('Content-Type: ' . ($action == 'download' ? 'application/pgp-keys' : 'text/plain; charset=us-ascii'));
+    drupal_set_header('Content-Disposition: ' . ($action == 'download' ? 'attachment' : 'inline') . '; filename=' . (isset($account->openpgp_key_id) ? strtoupper($account->openpgp_key_id) : 'OpenPGP') . '.asc');
+    drupal_set_header('Content-SHA1: ' . ($sha1 = sha1($key_ascii)));
+    drupal_set_header('Content-MD5: ' . md5($key_ascii));
+    drupal_set_header('Content-Length: ' . strlen($key_ascii));
+    drupal_set_header('ETag: "' . $sha1 . '"');
+
+    die($key_ascii);
+  }
+  return drupal_not_found();
+}

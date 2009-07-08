@@ -1,0 +1,7 @@
+; $Id: openpgp.info,v 1.1 2009/07/08 18:17:34 arto Exp $
+name = OpenPGP
+description = Provides support for the OpenPGP e-mail encryption standard.
+package = Cryptography
+dependencies[] = profile
+core = 6.x
+php = 5.2

@@ -1,0 +1,48 @@
+<?php
+// $Id: openpgp.install,v 1.1 2009/07/08 18:17:34 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_enable().
+ */
+function openpgp_enable() {
+  drupal_set_message(t('OpenPGP successfully installed. Please review the available <a href="@settings">configuration settings</a>.', array('@settings' => url('admin/settings/openpgp'))));
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function openpgp_install() {
+  //drupal_install_schema('openpgp');
+
+  // Migrate any previous GnuPG API settings:
+  openpgp_variable_copy('openpgp_mail_encrypt', 'gnupg_mail_encrypt');
+  openpgp_variable_copy('openpgp_mail_comment', 'gnupg_mail_comment');
+  openpgp_variable_copy('openpgp_mail_header',  'gnupg_mail_header');
+  openpgp_variable_copy('openpgp_mail_footer',  'gnupg_mail_footer');
+  openpgp_variable_copy('openpgp_gpg_exec',     'gnupg_exec');
+  openpgp_variable_copy('openpgp_gpg_homedir',  'gnupg_homedir');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function openpgp_uninstall() {
+  //drupal_uninstall_schema('openpgp');
+
+  db_query("DELETE FROM {variable} WHERE name LIKE '%s_%%'", 'openpgp');
+  cache_clear_all('variables', 'cache');
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Helper functions
+
+function openpgp_variable_copy($new, $old) {
+  if (variable_get($new, NULL) === NULL) {
+    if (($value = variable_get($old, NULL)) !== NULL) {
+      variable_set($new, $value);
+    }
+  }
+}
