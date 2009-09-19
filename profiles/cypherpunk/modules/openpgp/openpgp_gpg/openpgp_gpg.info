@@ -1,0 +1,7 @@
+; $Id: openpgp_gpg.info,v 1.1 2009/07/11 20:14:14 arto Exp $
+name = OpenPGP with GnuPG
+description = Provides an OpenPGP implementation utilizing the <a href="http://www.gnupg.org/" target="_blank">GNU Privacy Guard</a> (GnuPG) command-line tools.
+package = Cryptography
+dependencies[] = openpgp
+core = 6.x
+php = 5.2

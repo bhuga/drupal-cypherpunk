@@ -1,0 +1,81 @@
+<?php
+// $Id: openpgp_gpg.install,v 1.1 2009/07/11 20:14:14 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Core API hooks
+
+/**
+ * Implementation of hook_install().
+ */
+function openpgp_gpg_install() {
+  // Migrate any previous GnuPG API settings:
+  openpgp_gpg_variable_copy('openpgp_gpg_exec',     'gnupg_exec');
+  openpgp_gpg_variable_copy('openpgp_gpg_homedir',  'gnupg_homedir');
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function openpgp_gpg_requirements($phase) {
+  $status = array();
+
+  if ($phase == 'runtime') {
+    module_load_include('inc', 'openpgp', 'openpgp');
+    module_load_include('inc', 'openpgp_gpg', 'openpgp_gpg');
+
+    if (($version = GnuPG::version())) { // GnuPG is installed
+      $status['openpgp_gpg'] = array(
+        'title'       => t('OpenPGP implementation'),
+        'value'       => t('GnuPG @version available', array('@version' => (string)$version)),
+        'description' => '',
+        'severity'    => REQUIREMENT_OK,
+      );
+
+      if (!is_dir($homedir = GnuPG::homedir())) {
+        $status['openpgp_gpg_homedir'] = array(
+          'title'       => t('OpenPGP configuration'),
+          'value'       => t('GnuPG home directory is misconfigured'),
+          'description' => t('<a href="@gnupg" title="GNU Privacy Guard" target="_blank">GnuPG</a>\'s home directory %directory does not exist. Make sure the <a href="@settings">configuration settings</a> are correct.', array('@gnupg' => GNUPG_LINK, '%directory' => $homedir, '@settings' => url('admin/settings/openpgp/gpg'))),
+          'severity'    => REQUIREMENT_ERROR,
+        );
+      }
+      else if (!is_readable($homedir)) {
+        $status['openpgp_gpg_homedir'] = array(
+          'title'       => t('OpenPGP configuration'),
+          'value'       => t('GnuPG home directory is not readable'),
+          'description' => t('<a href="@gnupg" title="GNU Privacy Guard" target="_blank">GnuPG</a>\'s home directory %directory is not readable by Drupal. Make sure the <a href="@settings">configuration settings</a> and directory permissions are correct.', array('@gnupg' => GNUPG_LINK, '%directory' => $homedir, '@settings' => url('admin/settings/openpgp/gpg'))),
+          'severity'    => REQUIREMENT_ERROR,
+        );
+      }
+      else if (!is_writable($homedir)) {
+        $status['openpgp_gpg_homedir'] = array(
+          'title'       => t('OpenPGP configuration'),
+          'value'       => t('GnuPG home directory is not writable'),
+          'description' => t('<a href="@gnupg" title="GNU Privacy Guard" target="_blank">GnuPG</a>\'s home directory %directory is not writable by Drupal. Make sure the <a href="@settings">configuration settings</a> and directory permissions are correct.', array('@gnupg' => GNUPG_LINK, '%directory' => $homedir, '@settings' => url('admin/settings/openpgp/gpg'))),
+          'severity'    => REQUIREMENT_WARNING,
+        );
+      }
+    }
+    else {
+      $status['openpgp_gpg'] = array(
+        'title'       => t('OpenPGP implementation'),
+        'value'       => t('GnuPG not available'),
+        'description' => t('<a href="@gnupg" title="GNU Privacy Guard" target="_blank">GnuPG</a> is not available on the server, or the <a href="@settings">configuration settings</a> are incorrect.', array('@gnupg' => GNUPG_LINK, '@settings' => url('admin/settings/openpgp/gpg'))),
+        'severity'    => REQUIREMENT_ERROR,
+      );
+    }
+  }
+
+  return $status;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Helper functions
+
+function openpgp_gpg_variable_copy($new, $old) {
+  if (variable_get($new, NULL) === NULL) {
+    if (($value = variable_get($old, NULL)) !== NULL) {
+      variable_set($new, $value);
+    }
+  }
+}

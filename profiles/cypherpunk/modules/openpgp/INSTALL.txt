@@ -1,0 +1,76 @@
+// $Id: INSTALL.txt,v 1.6 2009/09/19 17:11:03 arto Exp $
+
+REQUIREMENTS
+------------
+This module requires Drupal 6.x and PHP 5.2.x (or newer) as well as a recent
+1.x or 2.x version (1.4.7 and newer should work, as should 2.0.12 or newer)
+of the GnuPG command-line tools; these must be installed on the web server
+by the system administrator as described in GnuPG's documentation:
+
+  <http://www.gnupg.org/>
+
+
+INSTALLATION
+------------
+
+  1. Ensure that the GnuPG command-line tools are installed on your server.
+
+  2. Copy all the module files into a subdirectory called
+     sites/all/modules/openpgp/ under your Drupal installation directory.
+
+  3. Go to [Administer >> Site building >> Modules] and enable the "OpenPGP"
+     and "OpenPGP with GnuPG" modules. You will find them in the section
+     labelled "Cryptography".
+
+  4. Go to [Administer >> User management >> Profiles] and create a new
+     multi-line textfield that will be used to store your users' public
+     keys. You can title and name this field anything you want; however, if
+     in doubt, use the following settings:
+
+       Category:    Contact details
+       Title:       PGP public key
+       Form name:   profile_openpgp_key
+       Visibility:  Public field, content shown on profile page but not used
+                    on member list pages.
+
+  5. Go to [Administer >> Site configuration >> Cryptography] to review and
+     change the e-mail encryption configuration options to your liking.
+
+     Also, in the section labelled "Public key storage", select the profile
+     field you created in the previous step.
+
+     (NOTE: to change any of the OpenPGP settings here, you must either be
+     the Drupal superadministrator or have the "administer OpenPGP
+     configuration" permission granted to you.)
+
+  6. Go to [Administer >> Site configuration >> Cryptography >> GnuPG] to
+     review and change the GNU Privacy Guard configuration options to your
+     liking.
+
+     In order for encryption to work at all, you must, at a minimum, here
+     input the correct path where the `gpg' binary is installed on your
+     server, as well as correctly configure (or create, if it doesn't exist)
+     the GnuPG home directory. (For the latter task, please refer to the
+     GnuPG documentation.)
+
+  7. Go to [Administer >> Reports >> Status report] and check under the
+     header "OpenPGP implementation" that your GnuPG installation was
+     correctly detected and that the GnuPG version number is displayed
+     without any associated warnings or errors.
+
+  8. (See README.txt for information on submitting bug reports.)
+
+
+TROUBLESHOOTING
+---------------
+Any encryption errors are logged to Drupal's watchdog log and will contain
+the GnuPG output for the command that failed. Here follow some common
+problematic scenarios and tips on troubleshooting them:
+
+  * gpg: Fatal: can't create directory `sites/all/modules/openpgp/.gnupg': \
+         No such file or directory
+
+    If you are getting the above error despite being certain that the GnuPG
+    home directory in question already exists, try replacing the relative
+    directory path at <admin/settings/openpgp/gpg> with the full absolute
+    path to the directory in question.

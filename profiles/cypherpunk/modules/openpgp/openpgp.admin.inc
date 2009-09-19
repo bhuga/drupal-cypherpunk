@@ -1,5 +1,5 @@
 <?php
-// $Id: openpgp.admin.inc,v 1.1 2009/07/08 18:17:33 arto Exp $
+// $Id: openpgp.admin.inc,v 1.3 2009/09/16 16:39:53 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Settings form
@@ -31,7 +31,7 @@ function openpgp_admin_settings() {
     '#type'          => 'fieldset',
     '#title'         => t('E-mail encryption settings'),
     '#collapsible'   => TRUE,
-    '#collapsed'     => ($disabled = (count(openpgp_get_providers()) == 0)),
+    '#collapsed'     => ($disabled = (count(openpgp_get_engines()) == 0)),
     '#description'   => $disabled ? ('<strong>' . t('This functionality requires that the GnuPG submodule be enabled.') . '</strong>') : '',
   );
   $form['mail']['openpgp_mail_encrypt'] = array(
@@ -68,7 +68,7 @@ function openpgp_admin_settings() {
     '#disabled'      => $disabled,
   );
 
-  return system_settings_form($form);
+  return array_merge_recursive(system_settings_form($form), array('buttons' => array('#weight' => 99)));
 }
 
 function openpgp_admin_settings_validate($form, &$form_state) {

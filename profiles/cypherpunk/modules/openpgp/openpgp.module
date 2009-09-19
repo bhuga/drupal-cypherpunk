@@ -1,5 +1,10 @@
 <?php
-// $Id: openpgp.module,v 1.1 2009/07/08 18:17:34 arto Exp $
+// $Id: openpgp.module,v 1.6 2009/09/18 10:31:51 arto Exp $
+
+//////////////////////////////////////////////////////////////////////////////
+// Module settings
+
+define('OPENPGP_AGENT', 'Drupal (+http://drupal.org/project/openpgp)');
 
 //////////////////////////////////////////////////////////////////////////////
 // Core API hooks
@@ -29,6 +34,12 @@ function openpgp_menu() {
       'page arguments' => array('openpgp_admin_settings'),
       'file' => 'openpgp.admin.inc',
     ),
+    'admin/settings/openpgp/configure' => array(
+      'title' => 'Configure',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    ),
+
     // Administer >> User management >> Public keys
     'admin/user/openpgp' => array(
       'title' => 'Public keys',
@@ -164,11 +175,83 @@ function openpgp_profile_alter(&$account) {
  * Implementation of hook_mail_alter().
  */
 function openpgp_mail_alter(&$message) {
-  if (($encrypt = variable_get('openpgp_mail_encrypt', '')) != '') {
-    if (is_object($account = @$message['params']['recipient'])) {
-      // TODO: put code back in here once the GnuPG submodule is ready to roll.
+  if (variable_get('openpgp_mail_encrypt', FALSE)) {
+    if (($recipients = openpgp_mail_get_recipients($message))) {
+      if (openpgp_mail_enabled($recipients)) {
+        openpgp_mail_encrypt($message, $recipients);
+      }
     }
   }
+}
+
+function openpgp_mail_get_recipients(&$message) {
+  switch ($message['id']) {
+    case 'user_register_admin_created':
+    case 'user_register_no_approval_required':
+    case 'user_register_pending_approval':
+    case 'user_password_reset':
+    case 'user_status_activated':
+    case 'user_status_blocked':
+    case 'user_status_deleted':
+      return array($message['params']['account']);
+    case 'contact_user_mail':
+      return array($message['params']['recipient']);
+    case 'contact_user_copy':
+      return array($message['params']['user']);
+    case 'contact_page_mail':
+    default:
+      return openpgp_mail_parse_recipients($message['to']);
+  }
+}
+
+function openpgp_mail_parse_recipients($addresses) {
+  $recipients = array();
+  foreach (is_array($addresses) ? $addresses : explode(',', $addresses) as $recipient) {
+    $recipient = trim(preg_match('/<([^>]+)>/', $recipient, $matches) ? $matches[1] : $recipient);
+
+    if (($account = user_load(array('mail' => $recipient)))) {
+      $recipients[$account->uid] = $account;
+    }
+    else {
+      $recipients[$recipient] = $recipient; // TODO: look it up on the keyservers?
+    }
+  }
+  return $recipients;
+}
+
+function openpgp_mail_encrypt(&$message, $recipients) {
+  $plaintext  = is_array($message['body']) ? implode("\n\n", $message['body']) : $message['body'];
+  $recipients = is_array($recipients) ? $recipients : array($recipients);
+  $options    = ($comment = variable_get('openpgp_mail_comment', '')) ? array('comment' => $comment) : array();
+
+  if (($ciphertext = openpgp_encrypt($plaintext, $recipients, $options))) {
+    $message['body'] = $ciphertext;
+
+    if (($header = variable_get('openpgp_mail_header', ''))) {
+      $message['body'] = $header . "\n\n" . $message['body'];
+    }
+
+    if (($footer = variable_get('openpgp_mail_footer', ''))) {
+      $message['body'] .= "\n" . $footer;
+    }
+
+    if (OPENPGP_AGENT) {
+      $message['headers']['X-PGP-Agent'] = OPENPGP_AGENT;
+    }
+  }
+  else {
+    watchdog('mail', 'Error encrypting e-mail (from %from to %to): <pre>@error</pre>', array('%from' => $message['from'], '%to' => $message['to'], '@error' => GnuPG::$output), WATCHDOG_WARNING, l(t('configure'), 'admin/settings/openpgp'));
+  }
+}
+
+function openpgp_mail_enabled($accounts) {
+  $result = ($encrypt = variable_get('openpgp_mail_encrypt', '')) != '';
+  if ($encrypt == 'custom') {
+    foreach ($accounts as $account) {
+      $result = $result && !empty($account->openpgp_mail_encrypt);
+    }
+  }
+  return $result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -194,6 +277,76 @@ function openpgp_lockdown_settings($op) {
 
 //////////////////////////////////////////////////////////////////////////////
 // OpenPGP API implementation
+
+/**
+ * Encrypts the given plaintext using the specified public key ID(s).
+ */
+function openpgp_encrypt($plaintext, $keys, array $options = array()) {
+  if (!module_exists('openpgp_gpg')) return FALSE;
+  module_load_include('inc', 'openpgp', 'openpgp');
+  module_load_include('inc', 'openpgp_gpg', 'openpgp_gpg');
+
+  return ($keys = openpgp_parse_keys($keys)) ? GnuPG::encrypt($plaintext, $keys, $options) : FALSE;
+}
+
+/**
+ * Decrypts the given ciphertext using the specified key ID.
+ */
+function openpgp_decrypt($ciphertext, $keys = NULL, array $options = array()) {
+  if (!module_exists('openpgp_gpg')) return FALSE;
+  module_load_include('inc', 'openpgp', 'openpgp');
+  module_load_include('inc', 'openpgp_gpg', 'openpgp_gpg');
+
+  return GnuPG::decrypt($ciphertext, $keys ? openpgp_parse_keys($keys) : NULL, $options);
+}
+
+/**
+ * Parses a binary or ASCII-armored OpenPGP message into its constituent
+ * packets.
+ */
+function openpgp_parse($input) {
+  module_load_include('inc', 'openpgp', 'openpgp');
+
+  if (strpos($input = (string)$input, '-----BEGIN') !== FALSE) {
+    if (!($input = openpgp_unarmor($input))) {
+      return FALSE; // unarmoring failed
+    }
+  }
+  return OpenPGP_Message::parse($input);
+}
+
+/**
+ * Decodes an ASCII-armored OpenPGP message into the binary message format.
+ */
+function openpgp_unarmor($ascii) {
+  module_load_include('inc', 'openpgp', 'openpgp');
+
+  return OpenPGP::unarmor($ascii);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// OpenPGP API helpers
+
+function openpgp_parse_keys($keys) {
+  $profile_field = openpgp_get_profile_field_name();
+
+  $keys = is_array($keys) ? $keys : array($keys);
+  foreach ($keys as $index => $key) {
+    if (is_object($key)) {
+      if (isset($key->uid)) {
+        $key = user_load($key->uid); // needed to prevent missing profile field in some contexts
+      }
+      if ($profile_field && !empty($key->$profile_field) && openpgp_unarmor($key->$profile_field)) { // a user object
+        $keys[$index] = $key = GnuPG::import_key($key->$profile_field);
+        //$keys[$index] = $key = openpgp_get_user_key($key);
+      }
+      if ($key instanceof OpenPGP_PublicKeyPacket) {
+        $keys[$index] = $key = $key->fingerprint;
+      }
+    }
+  }
+  return $keys;
+}
 
 function openpgp_get_user_key($account = NULL) {
   if (($field = openpgp_get_profile_field_name())) {
@@ -223,19 +376,19 @@ function openpgp_get_profile_fields() {
   return $fields;
 }
 
-function openpgp_get_provider_class($name = 'openpgp_gpg') {
-  if (($provider = openpgp_get_provider($name))) {
+function openpgp_get_engine_class($name = 'openpgp_gpg') {
+  if (($engine = openpgp_get_engine($name))) {
     // TODO
   }
 }
 
-function openpgp_get_provider($name = 'openpgp_gpg') {
-  $providers = openpgp_get_providers();
-  return isset($providers[$name]) ? $providers[$name] : NULL;
+function openpgp_get_engine($name = 'openpgp_gpg') {
+  $engines = openpgp_get_engines();
+  return isset($engines[$name]) ? $engines[$name] : NULL;
 }
 
-function openpgp_get_providers() {
-  return module_invoke_all('openpgp_providers');
+function openpgp_get_engines() {
+  return module_invoke_all('openpgp_engines');
 }
 
 function openpgp_get_public_key_id($msg) {
@@ -256,23 +409,6 @@ function openpgp_get_packet($msg, $packet_class) {
       }
     }
   }
-}
-
-function openpgp_parse($input) {
-  module_load_include('inc', 'openpgp', 'openpgp');
-
-  if (strpos($input = (string)$input, '-----BEGIN') !== FALSE) {
-    if (!($input = openpgp_unarmor($input))) {
-      return FALSE; // unarmoring failed
-    }
-  }
-  return OpenPGP_Message::parse($input);
-}
-
-function openpgp_unarmor($ascii) {
-  module_load_include('inc', 'openpgp', 'openpgp');
-
-  return OpenPGP::unarmor($ascii);
 }
 
 //////////////////////////////////////////////////////////////////////////////

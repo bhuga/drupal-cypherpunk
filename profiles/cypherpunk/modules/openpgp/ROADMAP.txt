@@ -1,0 +1,36 @@
+// $Id: ROADMAP.txt,v 1.2 2009/09/18 10:38:13 arto Exp $
+
+This is a listing of known bugs, features that mostly work but are still
+somewhat in progress, features that are being considered or planned for
+implementation, and just miscellaneous far-out ideas that could, in
+principle, be implemented if someone had the time and inclination to do so.
+
+(NOTE: there is no guarantee any of these items will, in fact, be
+implemented, nor should any possible scheduling indications be construed as
+promises under any circumstances. TANSTAAFL. If you absolutely need
+something implemented right now, please contact the developers to see if
+they're available for contract work, or whether a modest donation could
+perhaps speed things along.)
+
+
+KNOWN BUGS
+----------
+* When "Encrypt outgoing e-mail" is set to "Always" and a user saves their
+  profile, any previous customization of their user-specific encryption
+  toggle gets lost (because the checkbox is disabled and always results in a
+  value of "0").
+
+
+TODO
+----
+* Implement OpenPGP key storage based on Bitcache.
+* Implement support for the OpenPGP HTTP Keyserver Protocol (HKP).
+* Implement support for the OpenPGP Extensions for HTTP and Enigform:
+  <http://enigform.mozdev.org/>
+
+
+2.0
+---
+* Implement asymmetric OpenPGP encryption requiring no other
+  dependencies beyond PHP with the OpenSSL extension, based on:
+  <http://github.com/bendiken/openpgp>
