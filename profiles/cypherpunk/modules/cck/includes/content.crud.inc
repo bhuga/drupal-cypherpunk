@@ -1,5 +1,5 @@
 <?php
-// $Id: content.crud.inc,v 1.76.2.16 2009/06/18 19:27:10 markuspetrux Exp $
+// $Id: content.crud.inc,v 1.76.2.17 2009/07/14 22:17:05 yched Exp $
 
 /**
  * @file
@@ -42,9 +42,9 @@ function content_field_default_values($field_type) {
     $field['active'] = 1;
   }
 
-  $field['columns'] = module_invoke($module, 'field_settings', 'database columns', $field);
+  $field['columns'] = (array) module_invoke($module, 'field_settings', 'database columns', $field);
   // Ensure columns always default to NULL values.
-  foreach ((array) $field['columns'] as $column_name => $column) {
+  foreach ($field['columns'] as $column_name => $column) {
     $field['columns'][$column_name]['not null'] = FALSE;
   }
 
@@ -53,11 +53,10 @@ function content_field_default_values($field_type) {
   $field['db_storage'] = CONTENT_DB_STORAGE_PER_CONTENT_TYPE;
 
   // Make sure field settings all have an index in the array.
-  $setting_names = module_invoke($module, 'field_settings', 'save', $field);
-  if (is_array($setting_names)) {
-    foreach ($setting_names as $setting) {
-      $field[$setting] = NULL;
-    }
+  $setting_names = (array) module_invoke($module, 'field_settings', 'save', $field);
+  drupal_alter('field_settings', $setting_names, 'save', $field);
+  foreach ($setting_names as $setting) {
+    $field[$setting] = NULL;
   }
   return $field;
 }
@@ -93,9 +92,10 @@ function content_instance_default_values($field_name, $type_name, $widget_type) 
   }
 
   // Make sure widget settings all have an index in the array.
-  $settings_names = module_invoke($module, 'widget_settings', 'save', $widget);
+  $settings_names = (array) module_invoke($module, 'widget_settings', 'save', $widget);
+  drupal_alter('widget_settings', $settings_names, 'save', $widget);
   $widget['widget_settings'] = array();
-  foreach ((array) $settings_names as $name) {
+  foreach ($settings_names as $name) {
     $widget['widget_settings'][$name] = NULL;
   }
   return $widget;
@@ -399,14 +399,14 @@ function content_field_instance_update($field, $rebuild = TRUE) {
 function _content_field_write($field, $op = 'update') {
   // Rearrange the data to create the global_settings array.
   $field['global_settings'] = array();
-  $setting_names = module_invoke($field['module'], 'field_settings', 'save', $field);
-  if (is_array($setting_names)) {
-    foreach ($setting_names as $setting) {
-      // Unlike _content_field_instance_write() and 'widget_settings', 'global_settings'
-      // is never preexisting, so we take no particular precautions here.
-      $field['global_settings'][$setting] = isset($field[$setting]) ? $field[$setting] : '';
-      unset($field[$setting]);
-    }
+  $setting_names = (array) module_invoke($field['module'], 'field_settings', 'save', $field);
+  drupal_alter('field_settings', $setting_names, 'save', $field);
+
+  foreach ($setting_names as $setting) {
+    // Unlike _content_field_instance_write() and 'widget_settings', 'global_settings'
+    // is never preexisting, so we take no particular precautions here.
+    $field['global_settings'][$setting] = isset($field[$setting]) ? $field[$setting] : '';
+    unset($field[$setting]);
   }
   // 'columns' is a reserved word in MySQL4, so our column is named 'db_columns'.
   $field['db_columns'] = $field['columns'];
@@ -435,16 +435,15 @@ function _content_field_instance_write($field, $op = 'update') {
   $field = content_field_instance_collapse($field);
 
   // Rearrange the data to create the widget_settings array.
-  $setting_names = module_invoke($field['widget_module'], 'widget_settings', 'save', $field);
-  if (is_array($setting_names)) {
-    foreach ($setting_names as $setting) {
-      // In some cases (when the updated $field was originally read from
-      // the db, as opposed to gathered from the values of a form), the values
-      // are already in the right place, we take care to not wipe them.
-      if (isset($field[$setting])) {
-        $field['widget_settings'][$setting] = $field[$setting];
-        unset($field[$setting]);
-      }
+  $setting_names = (array) module_invoke($field['widget_module'], 'widget_settings', 'save', $field);
+  drupal_alter('widget_settings', $setting_names, 'save', $field);
+  foreach ($setting_names as $setting) {
+    // In some cases (when the updated $field was originally read from
+    // the db, as opposed to gathered from the values of a form), the values
+    // are already in the right place, we take care to not wipe them.
+    if (isset($field[$setting])) {
+      $field['widget_settings'][$setting] = $field[$setting];
+      unset($field[$setting]);
     }
   }
 

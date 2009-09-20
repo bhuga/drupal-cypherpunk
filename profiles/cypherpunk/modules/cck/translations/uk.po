@@ -1,4 +1,4 @@
-# $Id: uk.po,v 1.5.4.2 2009/05/24 17:56:10 podarok Exp $
+# $Id: uk.po,v 1.5.4.3 2009/09/16 20:32:42 podarok Exp $
 #
 # Ukrainian translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
@@ -45,11 +45,11 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: cck uk Ukrainian Translation\n"
-"POT-Creation-Date: 2009-05-23 15:31+0300\n"
-"PO-Revision-Date: 2009-05-24 20:01+0300\n"
+"Project-Id-Version: cck\n"
+"POT-Creation-Date: 2009-09-16 23:20+0300\n"
+"PO-Revision-Date: 2009-09-16 23:25+0300\n"
 "Last-Translator: Andriy Podanenko <podarok@ua.fm>\n"
-"Language-Team: uk <podarok@ua.fm>\n"
+"Language-Team: Ukrainian <drupalua@googlegroups.com>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -256,7 +256,7 @@ msgstr "Деякі оновлення все ще в черзі. Проханн�
 
 #: content.install:252
 msgid "Some updates are still pending.<br/>Please re-run the update script."
-msgstr "Деякі оновлення в черзі.<br/>Прохання перезапустити скрипт оновлення."
+msgstr ""
 
 #: (duplicate) content.install:10
 msgid "CCK - No Views integration"
@@ -724,7 +724,7 @@ msgstr "Збереження параметрів поля"
 
 #: includes/content.admin.inc:1242
 msgid "The default value PHP code returned an incorrect value.<br/>Expected format: <pre>!sample</pre> Returned value: @value"
-msgstr "Базове значення, що повертає PHP код - некоректне. <br/>Очікуваний формат: <pre>!sample</pre> Повернене значення: @value"
+msgstr ""
 
 #: includes/content.admin.inc:1281
 msgid "The PHP code for 'default value' returned @value, which is invalid."
@@ -777,9 +777,8 @@ msgstr "%name повинно бути номером"
 #: includes/content.admin.inc:1681
 msgid "1 item successfully processed:"
 msgid_plural "@count items successfully processed:"
-msgstr[0] "вдало оброблено @count елемент:"
-msgstr[1] "вдало оброблено @count елементи:"
-msgstr[2] "вдало оброблено @count елементів:"
+msgstr[0] ""
+msgstr[1] ""
 
 #: includes/content.crud.inc:589
 msgid "Content fields table %old_name has been renamed to %new_name and field instances have been updated."
@@ -1123,7 +1122,7 @@ msgstr "Вихід. Не виконано втягування;"
 
 #: modules/content_copy/content_copy.module:442
 msgid "An error has occurred adding the content type %type.<br/>Please check the errors displayed for more details."
-msgstr "Виникла помилка при додаванні матеріалу типу %type.<br/>Прохання перевірити відображені помилки для додаткових деталей"
+msgstr ""
 
 #: modules/content_copy/content_copy.module:467
 msgid "The imported field %field_label (%field_name) was not added to %type because that field already exists in %type."
