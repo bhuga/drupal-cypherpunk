@@ -1,4 +1,4 @@
-// $Id: README.txt,v 1.2 2009/05/20 00:26:22 arto Exp $
+// $Id: README.txt,v 1.3 2009/09/17 10:34:36 arto Exp $
 
 TimeCert for Drupal
 ===================
@@ -23,6 +23,12 @@ BUG REPORTS
 Post bug reports and feature requests to the issue tracking system at:
 
   <http://drupal.org/node/add/project-issue/timecert>
+
+
+FEATURE REQUESTS
+----------------
+The author is available for contract development and customization relating
+to this module. You can reach him at <http://drupal.org/user/26089/contact>.
 
 
 CREDITS
