@@ -1,5 +1,4 @@
 /.htaccess/1.90.2.3/Wed Dec 10 20:04:08 2008//TDRUPAL-6
-/COPYRIGHT.txt/1.2.2.1/Wed Feb  6 12:45:55 2008//TDRUPAL-6
 /INSTALL.mysql.txt/1.10/Mon Nov 19 19:53:51 2007//TDRUPAL-6
 /INSTALL.pgsql.txt/1.7/Mon Nov 26 16:36:42 2007//TDRUPAL-6
 /INSTALL.txt/1.61.2.4/Wed Jul  9 19:15:59 2008//TDRUPAL-6
@@ -19,4 +18,5 @@ D/profiles////
 D/scripts////
 D/sites////
 D/themes////
-/CHANGELOG.txt/1.253.2.32/Wed Jul  1 22:03:52 2009//TDRUPAL-6
+/CHANGELOG.txt/1.253.2.34/Sun Sep 20 11:04:11 2009//TDRUPAL-6
+/COPYRIGHT.txt/1.2.2.2/Sun Sep 20 11:04:11 2009//TDRUPAL-6
