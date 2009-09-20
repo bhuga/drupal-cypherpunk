@@ -1,5 +1,5 @@
 <?php
-// $Id: taxonomy.rules.inc,v 1.1.2.9 2009/05/28 10:51:35 fago Exp $
+// $Id: taxonomy.rules.inc,v 1.1.2.12 2009/08/05 17:20:41 fago Exp $
 
 
 /**
@@ -74,6 +74,35 @@ function taxonomy_rules_action_info() {
     'help' => t('Loading a taxonomy term will allow you to act on this term, for example you will be able to assign this term to a content.'),
     'module' => 'Taxonomy',
   );
+  $info['rules_action_taxonomy_add_term'] = array(
+    'label' => t('Add a new term to vocabulary'),
+    'arguments' => array(
+      'taxonomy_vocab' => array(
+        'type' => 'taxonomy_vocab',
+        'label' => t('Taxonomy vocabulary'),
+      ),
+    ),
+    'new variables' => array(
+      'taxonomy_term' => array(
+        'type' => 'taxonomy_term',
+        'label' => t('Taxonomy term'),
+      ),
+    ),
+    'eval input' => array('term|name', 'term|description'),
+    'module' => 'Taxonomy',
+  );
+
+  $info['rules_action_taxonomy_delete_term'] = array(
+    'label' => t('Delete a term'),
+    'arguments' => array(
+      'taxonomy_term' => array(
+        'type' => 'taxonomy_term',
+        'label' => t('Taxonomy term'),
+      ),
+    ),
+    'module' => 'Taxonomy',
+  );
+
   $info['rules_action_taxonomy_term_assign_to_content'] = array(
     'label' => t('Assign a term to content'),
     'arguments' => array(
@@ -123,6 +152,7 @@ function taxonomy_rules_action_info() {
         'label' => t('Taxonomy vocabulary'),
       ),
     ),
+    'eval input' => array('name', 'description', 'help'),
     'module' => 'Taxonomy',
   );
   return $info;
@@ -135,6 +165,26 @@ function rules_action_taxonomy_load_term($settings) {
   if ($term = taxonomy_get_term(!empty($settings['term']['term_text']) ? $settings['term']['term_text'] : $settings['term']['term_select'])) {
     return array('taxonomy_term' => $term);
   }
+}
+
+/**
+ * Action: Add a new term to vocabulary.
+ */
+function rules_action_taxonomy_add_term($taxonomy_vocab, $settings) {
+  // Prepare the values to pass to taxonomy_save_term();
+  $settings['term']['vid'] = $taxonomy_vocab->vid;
+  $form_values = $settings['term'];
+  taxonomy_save_term($form_values);
+  // Get the newly created term.
+  $term = taxonomy_get_term($form_values['tid']);
+  return array('taxonomy_term' => $term);
+}
+
+/**
+ * Action: Delete a term.
+ */
+function rules_action_taxonomy_delete_term($taxonomy_term) {
+  taxonomy_del_term($taxonomy_term->tid);
 }
 
 /**
@@ -185,6 +235,7 @@ function taxonomy_rules_data_type_info() {
       'savable' => FALSE,
       'identifiable' => TRUE,
       'module' => 'Taxonomy',
+      'token type' => 'taxonomy',
     ),
     'taxonomy_vocab' => array(
       'label' => t('taxonomy vocabulary'),
@@ -192,6 +243,7 @@ function taxonomy_rules_data_type_info() {
       'savable' => FALSE,
       'identifiable' => TRUE,
       'module' => 'Taxonomy',
+      'token type' => FALSE,
     ),
   );
 }

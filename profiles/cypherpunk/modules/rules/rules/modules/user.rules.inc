@@ -1,5 +1,5 @@
 <?php
-// $Id: user.rules.inc,v 1.1.2.19 2009/05/18 12:05:20 fago Exp $
+// $Id: user.rules.inc,v 1.1.2.20 2009/07/14 09:16:30 fago Exp $
 
 
 /**
@@ -162,6 +162,7 @@ function user_rules_action_info() {
       ),
       'help' => t('Enter an id or a name of the user to load.'),
       'module' => 'User',
+      'eval input' => array('userid', 'username'),
     ),
     'rules_action_user_create' => array(
       'label' => t('Create a user'),

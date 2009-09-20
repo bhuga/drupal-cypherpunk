@@ -1,5 +1,5 @@
 <?php
-// $Id: rules.rules_forms.inc,v 1.1.2.8 2009/06/26 11:35:55 fago Exp $
+// $Id: rules.rules_forms.inc,v 1.1.2.10 2009/08/29 08:56:30 fago Exp $
 
 
 /**
@@ -41,6 +41,18 @@ function rules_condition_number_compare_form($settings = array(), &$form) {
 function rules_condition_check_boolean_help() {
   return t('Check a <a href="http://en.wikipedia.org/wiki/Logical_value">truth value</a>, i.e. TRUE or FALSE.');
 }
+
+/**
+ * Also add in the invoked rule set when exporting for features.
+ */
+function rules_action_invoke_set_features_export(&$export, &$pipe, $settings, $element) {
+  $set_name = $element['#info']['set'];
+  if (!isset($export['features']['rules_sets'][$set_name])) {
+    $export['features']['rules_sets'][$set_name] = $set_name;
+    rules_features_process_set($set_name, $export, $pipe);
+  }
+}
+
 
 function rules_action_save_variable_form($settings, &$form, $form_state) {
   // Only add this form for the save variable action, not for the add variable action.

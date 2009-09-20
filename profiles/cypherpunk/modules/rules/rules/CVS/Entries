@@ -1,10 +1,11 @@
-/rules.api.php/1.1.2.5/Wed Jun 24 15:47:47 2009//TDRUPAL-6--1
 /rules.data_types.inc/1.1.2.19/Sun Apr 19 15:03:44 2009//TDRUPAL-6--1
 /rules.info/1.1.2.2/Thu Jul 10 08:15:04 2008//TDRUPAL-6--1
 /rules.input_evaluators.inc/1.1.2.9/Sun Apr 19 15:03:44 2009//TDRUPAL-6--1
 /rules.install/1.1.2.24/Thu Apr 30 09:48:39 2009//TDRUPAL-6--1
-/rules.module/1.1.2.62/Wed Jun 24 15:41:14 2009//TDRUPAL-6--1
 /rules.potx.inc/1.1.2.1/Sun Apr 19 18:19:06 2009//TDRUPAL-6--1
-/rules.variables.inc/1.1.2.32/Thu Apr 30 11:58:30 2009//TDRUPAL-6--1
 D/modules////
 D/translations////
+/rules.api.php/1.1.2.9/Sun Sep 20 11:27:40 2009//TDRUPAL-6--1
+/rules.export.inc/1.1.2.6/Fri Aug 28 22:05:43 2009//TDRUPAL-6--1
+/rules.module/1.1.2.69/Sun Sep 20 11:27:40 2009//TDRUPAL-6--1
+/rules.variables.inc/1.1.2.33/Sun Sep 20 11:27:40 2009//TDRUPAL-6--1

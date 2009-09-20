@@ -1,4 +1,4 @@
-# $Id: ja.po,v 1.1.2.2 2009/06/26 05:22:57 pineray Exp $
+# $Id: ja.po,v 1.1.2.3 2009/08/28 20:03:00 fago Exp $
 #
 # Japanese translation of Drupal (general)
 # Copyright PineRay <matsudaterutaka@gmail.com>
@@ -20,7 +20,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n!=1);\n"
 
 #: rules_scheduler.rules.inc:22
-msgid "Schedule @set"
+msgid "Schedule "@set""
 msgstr "スケジュール @set"
 
 #: rules_scheduler.rules.inc:26

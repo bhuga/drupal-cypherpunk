@@ -1,5 +1,5 @@
 <?php
-// $Id: rules_admin.inc,v 1.1.2.10 2009/04/20 11:45:58 fago Exp $
+// $Id: rules_admin.inc,v 1.1.2.12 2009/08/19 15:24:41 fago Exp $
 
 
 /**
@@ -235,10 +235,13 @@ function _rules_admin_rule_get_new_unique_name() {
  *
  * @param $cfirst
  *   If TRUE, capitalize the first letter, if FALSE lower case the first letter.
+ * @param $element
+ *   The element having or containing this label. Pass by referenec to allow
+ *   callbacks to alter some info, used by rules_core_node_label_callback().
  *
  * @return An array of changed properties of the given info
  */
-function _rules_admin_get_label(&$form_state, $info, $element, $value, $cfirst = NULL) {
+function _rules_admin_get_label(&$form_state, $info, &$element, $value, $cfirst = NULL) {
   $info_changes = array();
 
   if (drupal_strtolower($info['label']) != drupal_strtolower($value)) {
@@ -383,4 +386,8 @@ function rules_admin_add_crumbs($crumbs) {
     $breadcrumb = array_merge($breadcrumb, $crumbs);
     drupal_set_breadcrumb($breadcrumb);
   }
+}
+
+function rules_admin_is_event_rule($rule) {
+  return !empty($rule['#set']) && strpos($rule['#set'], 'event_') === 0;
 }

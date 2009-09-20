@@ -1,0 +1,6 @@
+; $Id: rules_forms.info,v 1.1.2.1 2009/07/30 18:53:40 fago Exp $
+name = Rules Forms support
+description = Provides events, conditions and actions for rule-based form customization.
+dependencies[] = rules
+package = Rules
+core = 6.x

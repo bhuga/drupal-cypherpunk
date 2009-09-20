@@ -1,5 +1,5 @@
 <?php
-// $Id: system.rules.inc,v 1.1.2.16 2009/05/18 12:27:06 fago Exp $
+// $Id: system.rules.inc,v 1.1.2.17 2009/07/20 16:22:24 fago Exp $
 
 
 /**
@@ -18,6 +18,7 @@ function system_rules_event_info() {
       'label' => t('User is going to view a page'),
       'module' => 'System',
       'arguments' => rules_events_global_user_argument(),
+      'help' => t("Be aware that some actions might initialize the theme system. After that, it's impossible for any module to change the used theme."),
     ),
     'cron' => array(
       'label' => t('Cron maintenance tasks are performed'),
