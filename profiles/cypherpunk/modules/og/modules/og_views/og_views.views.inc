@@ -1,5 +1,5 @@
 <?php
-// $Id: og_views.views.inc,v 1.13.4.5 2009/06/10 22:50:00 weitzman Exp $
+// $Id: og_views.views.inc,v 1.13.4.7 2009/09/17 13:25:32 weitzman Exp $
 
 /**
  * Implementation of hook_views_handlers().
@@ -271,11 +271,6 @@ function og_views_data_og() {
 
 function og_views_data_og_ancestry() {
   $data['og_ancestry']['table']['group']  = t('Organic groups');
-  $data['og_ancestry']['table']['base'] = array(
-    'field' => 'nid',
-    'title' => t('Group posts'),
-    'help' => t('Posts which are affiliated with a group.'),
-  );
   $data['og_ancestry']['table']['join'] = array(
     'node' => array(
       'left_field' => 'nid',
@@ -332,11 +327,6 @@ function og_views_data_og_ancestry() {
 // --------- Table og_access_post
 function og_views_data_og_access_post() {
   $data['og_access_post']['table']['group']  = t('Organic groups');
-  $data['og_access_post']['table']['base'] = array(
-    'field' => 'nid',
-    'title' => t('Group posts'),
-    'help' => t('Posts which are affiiated with a group.'),
-  );
   $data['og_access_post']['table']['join'] = array(
     'node' => array(
       'left_field' => 'nid',
@@ -537,15 +527,4 @@ function og_views_data_og_notifications() {
     ),
   );
   return $data;
-}
-
-// -------- Utility functions.
-
-function og_views_set_breadcrumb($nid) {
-  $node = node_load((int)$nid);
-  $bc = array(
-    '<front>' => t('Home'),
-    "node/$nid" => check_plain($node->title),
-  );
-  return $bc;
 }
