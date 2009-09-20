@@ -1,5 +1,5 @@
 <?php
-// $Id: googleanalytics_basic.test,v 1.2.2.8 2009/05/02 10:28:54 hass Exp $
+// $Id: googleanalytics_basic.test,v 1.2.2.9 2009/07/25 23:58:40 hass Exp $
 
 /**
  * @file
@@ -15,7 +15,7 @@ class GoogleAnalyticsBasicTest extends DrupalWebTestCase {
     );
   }
 
-  function setUp() {
+  public function setUp() {
     parent::setUp('googleanalytics');
 
     $permissions = array('administer google analytics');
@@ -25,7 +25,7 @@ class GoogleAnalyticsBasicTest extends DrupalWebTestCase {
     $this->drupalLogin($user);
   }
 
-  function testGoogleAnalytics() {
+  public function testGoogleAnalytics() {
     // Check for setting page's presence.
     $this->drupalGet('admin/settings/googleanalytics');
     $this->assertRaw(t('Google Analytics account number'), '[testGoogleAnalytics]: Settings page displayed.');
@@ -36,7 +36,7 @@ class GoogleAnalyticsBasicTest extends DrupalWebTestCase {
     $this->assertRaw(t('A valid Google Analytics account number is case sensitive and formatted like UA-xxxxxx-x.'), '[testGoogleAnalytics]: Invalid account number validated.');
   }
 
-  function testGoogleAnalyticsTracking() {
+  public function testGoogleAnalyticsTracking() {
     // Set visibility to hide tracking code on admin page only,
     // track authenticated users.
     variable_set('googleanalytics_visibility', 0);

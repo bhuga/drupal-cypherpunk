@@ -1,5 +1,5 @@
 <?php
-// $Id: googleanalytics.admin.inc,v 1.4.2.12 2009/03/08 11:38:26 hass Exp $
+// $Id: googleanalytics.admin.inc,v 1.4.2.14 2009/08/22 11:48:15 hass Exp $
 
 /**
  * @file
@@ -126,7 +126,7 @@ function googleanalytics_admin_settings_form(&$form_state) {
     '#description' => t('Segment users based on different properties, additionally to the basic IP address based tracking provided by Google Analytics.') . (!$profile_enabled ? ' '. t('<a href="@module_list">Enable the profile module</a> to be able to use profile fields for more granular tracking.', array('@module_list' => url('admin/build/modules'))) : '') .' '. t('Make sure you will not associate (or permit any third party to associate) any data gathered from Your Website(s) (or such third parties\' website(s)) with any personally identifying information from any source as part of Your use (or such third parties\' use) of the Google Analytics service. For more information see section 8.1 in the <a href="@ga_tos">Google Analytics terms of use</a>.', array('@ga_tos' => 'http://www.google.com/analytics/en-GB/tos.html')) .' '. t('Selecting one or more values is supported. To select multiple items, hold down CTRL (PC) or &#8984; (Mac) while selecting fields.'),
     '#default_value' => variable_get('googleanalytics_segmentation', ''),
     '#options' => $fields,
-    '#size' => (count($fields)>10) ? 10 : count($fields),
+    '#size' => count($fields)>3 ? 10 : 3,
     '#multiple' => TRUE
   );
 
@@ -160,7 +160,7 @@ function googleanalytics_admin_settings_form(&$form_state) {
     '#title' => t('File extensions to track'),
     '#default_value' => variable_get('googleanalytics_trackfiles_extensions', GA_TRACKFILES_EXTENSIONS),
     '#description' => t('A pipe separated list of file extensions that should be tracked when clicked with regular expression support. Example: !extensions', array('!extensions' => GA_TRACKFILES_EXTENSIONS)),
-    '#maxlength' => 256,
+    '#maxlength' => 255,
   );
 
   // Advanced feature configurations.
