@@ -1,5 +1,5 @@
 <?php
-// $Id: bitcache.module,v 1.35 2009/07/04 12:01:36 arto Exp $
+// $Id: bitcache.module,v 1.36 2009/07/29 13:06:51 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Module settings
@@ -617,6 +617,7 @@ function bitcache_create_repository($name, array $options = array()) {
 
   if ($options['adapter'] == 'file') {
     $options['location'] = !empty($options['location']) ? $options['location'] : BITCACHE_ROOT . '/' . $name;
+    @mkdir(bitcache_token_replace($options['location']), 0777, TRUE);
   }
 
   $record = array_intersect_key($options, array_flip(array('module', 'adapter', 'enabled', 'mutable', 'indexed', 'weight')));
@@ -870,6 +871,7 @@ function bitcache_tmpname($register = TRUE) {
 
 function bitcache_token_replace($text) {
   if (module_exists('token')) {
+    module_load_include('inc', 'bitcache', 'bitcache.token');
     return token_replace($text);
   }
   else { // simple fallback token support
