@@ -1,5 +1,5 @@
 <?php
-// $Id: rdf.views.inc,v 1.9 2009/03/28 02:37:22 arto Exp $
+// $Id: rdf.views.inc,v 1.12 2009/09/01 06:03:17 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Views API hooks
@@ -222,7 +222,7 @@ function rdf_views_set_feed_settings($feed_id, array $settings) {
   while ($row = db_fetch_object($result)) {
     $row->display_options = unserialize($row->display_options);
     if (isset($row->display_options['style_plugin']) && $row->display_options['style_plugin'] == 'rdf') {
-      $item_options = array_intersect_key($settings, array('item_length' => '', 'date_timezone' => ''));
+      $item_options = array_intersect_key($settings, array('item_length' => '', 'author_property' => '', 'author_value' => '', 'date_timezone' => '', 'date_timezone_dst' => '', 'date_timezone_name' => ''));
       $feed_options = array_diff_key($settings, $item_options);
       if (($row->display_options['style_options'] != $feed_options) || ($row->display_options['row_options'] != $item_options)) {
         $row->display_options['style_options'] = $feed_options;

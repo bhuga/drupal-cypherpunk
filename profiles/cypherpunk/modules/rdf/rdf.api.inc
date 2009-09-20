@@ -1,5 +1,5 @@
 <?php
-// $Id: rdf.api.inc,v 1.38 2009/03/27 21:01:13 arto Exp $
+// $Id: rdf.api.inc,v 1.40 2009/08/16 00:17:41 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // RDF API settings
@@ -202,7 +202,7 @@ function rdf_bnode($id = NULL) {
   return $id ? RDF_BNode::id($id) : RDF_BNode::generate();
 }
 
-function rdf_datetime($timestamp = NULL, $timezone = 0) {
+function rdf_datetime($timestamp = NULL, $tz_offset = NULL, $tz_name = NULL, $datatype = 'xsd:dateTime') {
   if (is_numeric($timestamp)) {
     $timestamp = (int)$timestamp;
   }
@@ -212,10 +212,22 @@ function rdf_datetime($timestamp = NULL, $timezone = 0) {
   else if (is_null($timestamp)) {
     $timestamp = gmmktime();
   }
-  $datetime = format_date($timestamp, 'custom', 'Y-m-d\TH:i:sO', $timezone);
+
+  $datetime = format_date($timestamp, 'custom', 'Y-m-d\TH:i:sO', (int)$tz_offset);
   $datetime = str_replace('+0000', 'Z', $datetime); // clean up format_date() result
   $datetime = preg_replace('/([+-])(\d{2}):?(\d{2})$/', '\1\2:\3', $datetime);
-  return rdf_literal($datetime, NULL, 'xsd:dateTime');
+
+  // This is a non-standard extension for outputting the time zone name
+  // appended to the datetime literal value. If you don't know why you'd do
+  // this, then you don't need this. However, if you *do* need this, make
+  // sure to also specify another literal datatype than 'xsd:dateTime' in
+  // the $datatype argument in order to avoid overloading the XSD semantics.
+  // Example output: "2009-08-15T23:59:59-04:00 America/New_York"^^$datatype
+  if ($tz_name) {
+    $datetime .= ' ' . (string)$tz_name;
+  }
+
+  return rdf_literal($datetime, NULL, $datatype);
 }
 
 function rdf_literal($value, $language = NULL, $datatype = NULL) {

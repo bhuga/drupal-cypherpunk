@@ -1,9 +1,6 @@
 /INSTALL.txt/1.5/Mon Feb 16 13:27:09 2009//
 /README.txt/1.8/Mon Mar  2 03:17:06 2009//
-/rdf.admin.inc/1.38/Sat Mar 28 02:37:22 2009//
-/rdf.api.inc/1.38/Fri Mar 27 21:01:13 2009//
 /rdf.db.inc/1.16/Sat Mar 28 02:37:22 2009//
-/rdf.feed.inc/1.4/Wed Mar 25 20:29:27 2009//
 /rdf.info/1.5/Mon Feb 16 13:27:09 2009//
 /rdf.install/1.13/Sat Mar 28 02:37:22 2009//
 /rdf.menu.inc/1.2/Wed Mar 25 22:55:20 2009//
@@ -13,9 +10,12 @@
 /rdf.services.inc/1.5/Mon Feb 16 13:27:09 2009//
 /rdf.test/1.4/Sun Mar  8 01:38:32 2009//
 /rdf.theme.inc/1.9/Mon Feb 16 13:27:09 2009//
-/rdf.views.inc/1.9/Sat Mar 28 02:37:22 2009//
 D/adapters////
 D/contrib////
 D/formats////
 D/translations////
 /rdf.feedapi.inc/1.4/Sat Jul  4 09:23:57 2009//
+/rdf.admin.inc/1.41/Sun Sep 20 11:11:54 2009//
+/rdf.api.inc/1.40/Sun Sep 20 11:11:55 2009//
+/rdf.feed.inc/1.11/Sun Sep 20 11:11:55 2009//
+/rdf.views.inc/1.12/Sun Sep 20 11:11:55 2009//

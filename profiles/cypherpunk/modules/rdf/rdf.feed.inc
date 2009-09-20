@@ -1,5 +1,5 @@
 <?php
-// $Id: rdf.feed.inc,v 1.4 2009/03/25 20:29:27 arto Exp $
+// $Id: rdf.feed.inc,v 1.11 2009/09/03 09:35:45 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // RDF feeds
@@ -164,41 +164,11 @@ function rdf_build_rss_feed_node($nid, array $options = array()) {
 
   // Add dc:date for the created date and dc:creator for the author:
   // @see http://web.resource.org/rss/1.0/modules/dc/
-  $item->rdf['dc:date'][]    = rdf_datetime($item->created, empty($options['date_timezone']) ? 0 : variable_get('date_default_timezone', 0));
-  $item->rdf['dc:creator'][] = $item->name;
+  $item->rdf['dc:date'][] = rdf_datetime($item->created, empty($options['date_timezone']) ? 0 : variable_get('date_default_timezone', 0));
 
-  // Add dc:subject properties for the node's taxonomy terms.
-  // @see http://web.resource.org/rss/1.0/modules/dc/
-  if (!empty($item->taxonomy)) {
-    foreach ($item->taxonomy as $tid => $term) {
-      // TODO: should these be output as literals or taxonomy URIs?
-      $item->rdf['dc:subject'][] = $term->name;
-    }
-  }
-
-  // Invoke hook_nodeapi('rss item') to allow modules to add additional item
-  // fields and/or modify $item; this is the same hook as used by
-  // node_feed() in node.module.
-  foreach (node_invoke_nodeapi($item, 'rss item') as $element) {
-    // To prevent general pandemonium due to the modules responding to this
-    // hook having been designed around RSS 2.0, we only support
-    // explicitly-namespaced properties (such as those output by the
-    // Location module).
-    if (!empty($element['namespace'])) {
-      foreach ($element['namespace'] as $ns => $ns_uri) {
-        $ns_prefix = preg_replace('/^xmlns:(.*)$/', '\1', $ns);
-        rdf_register_namespace($ns_prefix, $ns_uri);
-      }
-
-      if (!is_array($element['value'])) {
-        $item->rdf[$element['key']][] = $element['value'];
-      }
-      else {
-        // TODO: need to construct an equivalent BNode structure
-        //$item->rdf[$element['key']][] = 
-      }
-    }
-  }
+  rdf_build_rss_feed_node_author($item, $options);
+  rdf_build_rss_feed_node_taxonomy($item, $options);
+  rdf_build_rss_feed_nodeapi($item, $options);
 
   // HACK: this snippet provides direct support for RDF-mapped CCK fields.
   // This should eventually be properly handled by the RDF Schema API.
@@ -230,7 +200,74 @@ function rdf_build_rss_feed_node($nid, array $options = array()) {
   return array($item->url => $item->rdf);
 }
 
+function rdf_build_rss_feed_node_author(&$item, array $options) {
+  $item->rdf['dc:creator'][] = $item->name;
+
+  // We always add dc:creator, above, but we also allow another custom
+  // property (e.g. foaf:maker) to be configured. Furthermore, if the Token
+  // module is available, the administrator can configure a token
+  // substitution string in the feed settings and this will be used to build
+  // up the author name to output.
+  if (!empty($options['author_property'])) {
+    if (module_exists('token') && !empty($options['author_value'])) {
+      $author = $options['author_value'];
+      $author = token_replace($author, 'node', $item);
+      $author = token_replace($author, 'user', user_load($item->uid));
+    }
+    else {
+      $author = $item->name;
+    }
+    $item->rdf[$options['author_property']][] = $author;
+  }
+}
+
+function rdf_build_rss_feed_node_taxonomy(&$item, array $options) {
+  // Add dc:subject properties for the node's taxonomy terms.
+  // @see http://web.resource.org/rss/1.0/modules/dc/
+  if (!empty($item->taxonomy)) {
+    foreach ($item->taxonomy as $tid => $term) {
+      // TODO: should these be output as literals or taxonomy URIs?
+      $item->rdf['dc:subject'][] = $term->name;
+    }
+  }
+}
+
+function rdf_build_rss_feed_nodeapi(&$item, array $options) {
+  // Invoke hook_nodeapi('rss item') to allow modules to add additional item
+  // fields and/or modify $item; this is the same hook as used by
+  // node_feed() in node.module.
+  foreach (node_invoke_nodeapi($item, 'rss item') as $element) {
+    // To prevent general pandemonium due to the modules responding to this
+    // hook having been designed around RSS 2.0, we only support
+    // explicitly-namespaced properties (such as those output by the
+    // Location module).
+    if (!empty($element['namespace'])) {
+      foreach ($element['namespace'] as $ns => $ns_uri) {
+        $ns_prefix = preg_replace('/^xmlns:(.*)$/', '\1', $ns);
+        rdf_register_namespace($ns_prefix, $ns_uri);
+      }
+
+      if (!is_array($element['value'])) {
+        $item->rdf[$element['key']][] = $element['value'];
+      }
+      else {
+        foreach ($element['value'] as $key => $value) {
+          if (!is_array($value)) {
+            $item->rdf[$key][] = $value;
+          }
+        }
+        // TODO: need to construct an equivalent BNode structure
+        //$item->rdf[$element['key']][] = 
+      }
+    }
+  }
+}
+
 function rdf_build_rss_feed_node_field(&$item, $field_name, $field_info, array $options) {
+  if (isset($field_info['#access']) && !$field_info['#access']) {
+    return; // this provides integration with CCK's Content Permissions module
+  }
+
   foreach (array('' => 'value', '[from]' => 'value', '[to]' => 'value2') as $field_suffix => $field_value_index) {
     if (($field_uri = variable_get('rdf_schema_property_content_' . $field_name . $field_suffix, '')) != '' && rdf_is_valid_uri($field_uri)) {
       if (isset($item->$field_name)) {
@@ -269,5 +306,16 @@ function rdf_get_rss_feed_date_field($field_value, $field_value_index, array $op
       break;
   }
 
-  return rdf_datetime($timestamp, empty($options['date_timezone']) ? 0 : $timezone);
+  // Daylight Saving Time (DST) adjustments:
+  if (@$options['date_timezone'] == 'local' && !empty($options['date_timezone_dst'])) {
+    if (($dst_diff = (int)date('I', $timestamp) - (int)date('I', time()))) {
+      $timezone  += ($dst_diff * 3600);
+      $timestamp -= ($dst_diff * 3600);
+    }
+  }
+
+  return rdf_datetime($timestamp,
+    empty($options['date_timezone'])      ? 0 : $timezone,                    // TZ offset
+    empty($options['date_timezone_name']) ? NULL : @$field_value['timezone'], // TZ name
+    variable_get('rdf_datetime_datatype', 'xsd:dateTime'));                   // RDF datatype
 }

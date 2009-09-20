@@ -1,5 +1,5 @@
 <?php
-// $Id: rdf.admin.inc,v 1.38 2009/03/28 02:37:22 arto Exp $
+// $Id: rdf.admin.inc,v 1.41 2009/09/01 06:03:17 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // RDF settings form
@@ -550,6 +550,7 @@ function rdf_admin_feed_channel_form(&$form, &$form_state, $defaults = array()) 
 }
 
 function rdf_admin_feed_item_form(&$form, &$form_state, $defaults = array(), $module = NULL) {
+  // Content display settings
   $form['item_length'] = array(
     '#type'          => 'select',
     '#title'         => t('Content display type'),
@@ -562,12 +563,51 @@ function rdf_admin_feed_item_form(&$form, &$form_state, $defaults = array(), $mo
     ),
     '#description'   => t('How to display content items in the feed.'),
   );
+
+  // Author settings
+  $form['author_property'] = array(
+    '#type'          => 'textfield',
+    '#title'         => 'Author property',
+    '#default_value' => !empty($defaults['author_property']) ? $defaults['author_property'] : 'dc:creator',
+    '#maxlength'     => 255,
+    '#size'          => 20,
+    '#description'   => t('Configure the RDF predicate to use when outputting the author name in this RDF feed. For compatibility with the RSS 1.0 specification, the default property of <code>dc:creator</code> is always output; however, by changing this property, you can output an additional custom property (e.g. <code>foaf:maker</code>).'),
+    '#autocomplete_path' => 'rdf/autocomplete/property',
+  );
+  if (module_exists('token')) {
+    // If the Token module is installed, allow customization of the author property's value:
+    $form['author_value'] = array(
+      '#type'          => 'textfield',
+      '#title'         => 'Author text',
+      '#default_value' => !empty($defaults['author_value']) ? $defaults['author_value'] : '[author-name-raw]',
+      '#maxlength'     => 255,
+      '#size'          => 60,
+      '#description'   => t('If you have installed the <a href="http://drupal.org/project/token" target="_blank">Token</a> module, you may here configure text substitutions to be used when outputting the author name into RDF feeds. The default setting is to use the <code>[author-name-raw]</code> token, which displays the author\'s user name in the usual Drupal manner.'),
+    );
+  }
+  else {
+    $form['author_value'] = array('#type' => 'hidden', '#value' => '[author-name-raw]');
+  }
+
+  // Time zone settings
   $form['date_timezone'] = array(
     '#type'          => 'select',
     '#title'         => t('Time zone output'),
     '#default_value' => !empty($defaults['date_timezone']) ? $defaults['date_timezone'] : '',
     '#options'       => array('' => t('UTC'), 'local' => t('Local')),
     '#description'   => t('It is <strong>strongly</strong> recommended you output dates in UTC to prevent a multitude of problems due to buggy client software.'),
+  );
+  $form['date_timezone_dst'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t('Adjust time zone offsets for Daylight Saving Time (DST)'),
+    '#default_value' => !empty($defaults['date_timezone_dst']) ? $defaults['date_timezone_dst'] : '',
+    '#description'   => t(''),
+  );
+  $form['date_timezone_name'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t('Append the time zone name to datetime literals'),
+    '#default_value' => !empty($defaults['date_timezone_name']) ? $defaults['date_timezone_name'] : '',
+    '#description'   => t('This is a non-standard extension to XML Schema\'s datetime literal datatype and <strong>not</strong> recommended for ordinary usage.'),
   );
 }
 
@@ -612,7 +652,7 @@ function rdf_admin_feed_submit($form, &$form_state) {
 
   // Save feed settings
   $function = ($feed->module == 'views') ? 'rdf_views_set_feed_settings' : 'rdf_set_feed_settings';
-  $function($feed, compact('description_from_mission', 'description', 'update_period', 'update_frequency', 'update_base', 'format', 'item_length', 'date_timezone'));
+  $function($feed, compact('description_from_mission', 'description', 'update_period', 'update_frequency', 'update_base', 'format', 'item_length', 'author_property', 'author_value', 'date_timezone', 'date_timezone_dst', 'date_timezone_name'));
   drupal_set_message(t('The feed configuration for %path has been updated.', array('%path' => $feed->path)));
 }
 
