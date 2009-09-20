@@ -1,5 +1,5 @@
 <?php
-// $Id: token_node.inc,v 1.5.4.14 2009/05/14 16:09:15 greggles Exp $
+// $Id: token_node.inc,v 1.5.4.17 2009/08/12 15:47:23 greggles Exp $
 
 /**
  * @file
@@ -24,17 +24,27 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $node = $object;
       $account = db_fetch_object(db_query("SELECT name, mail FROM {users} WHERE uid = %d", $node->uid));
 
-      $values['nid']              = $node->nid;
-      $values['type']             = $node->type;
-      $values['type-name']        = node_get_types('name', $node->type);
-      $values['language']         = filter_xss_admin($node->language);
-      $values['title']            = check_plain($node->title);
-      $values['title-raw']        = $node->title;
-      $values['author-uid']       = $node->uid;
-      $values['author-name']      = check_plain($account->name);
-      $values['author-name-raw']  = $account->name;
-      $values['author-mail']      = check_plain($account->mail);
-      $values['author-mail-raw']  = $account->mail;
+      $values['nid']                = $node->nid;
+      $values['type']               = $node->type;
+      $values['type-name']          = node_get_types('name', $node->type);
+      $values['language']           = filter_xss_admin($node->language);
+      $values['title']              = check_plain($node->title);
+      $values['title-raw']          = $node->title;
+      $values['author-uid']         = $node->uid;
+      $values['author-name']        = check_plain($account->name);
+      $values['author-name-raw']    = $account->name;
+      $values['author-mail']        = check_plain($account->mail);
+      $values['author-mail-raw']    = $account->mail;
+
+      if (module_exists('comment')) {
+        $values['node_comment_count'] = isset($node->comment_count) ? $node->comment_count : 0;
+        $values['unread_comment_count'] = comment_num_new($node->nid);
+      }
+      else {
+        $values['node_comment_count'] = 0;
+        $values['unread_comment_count'] = 0;
+      }
+
       if (isset($node->created)) {
         $date = (int)$node->created;
         $values['yyyy']           = date('Y', $date);
@@ -182,7 +192,8 @@ function node_token_list($type = 'all') {
     $tokens['node']['author-name-raw'] = t("Node author's user name. WARNING - raw user input.");
     $tokens['node']['author-mail']     = t("Node author's e-mail.");
     $tokens['node']['author-mail-raw'] = t("Node author's e-mail. WARNING - raw user input.");
-
+    $tokens['node']['node_comment_count'] = t("The number of comments on a node.");
+    $tokens['node']['unread_comment_count'] = t("The number of new comments on a node.");
 
     $tokens['node']['term']            = t("Name of top taxonomy term");
     $tokens['node']['term-raw']        = t("Unfiltered name of top taxonomy term. WARNING - raw user input.");
