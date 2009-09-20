@@ -1,0 +1,16 @@
+= Cypherpunk Drupal
+
+* http://drupal.org/project/cypherpunk
+* http://github.com/bendiken/drupal-cypherpunk
+
+
+== Resources
+
+* http://groups.drupal.org
+* http://fr33agents.ning.com/group/drupal
+
+
+== License
+
+All source code is available under the terms of the GNU General Public
+License (GPL). For more information, see the accompanying LICENSE.txt file.
