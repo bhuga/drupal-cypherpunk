@@ -1,4 +1,4 @@
-# $Id: cs.po,v 1.1.2.5 2008/08/16 09:40:25 freso Exp $
+# $Id$
 #
 # Czech translation of pathauto (6.x-1.x-dev)
 # Copyright (c) 2008 by the Czech translation team
