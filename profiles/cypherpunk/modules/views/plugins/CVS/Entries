@@ -9,7 +9,6 @@
 /views_plugin_argument_validate_php.inc/1.1/Wed Sep  3 19:21:30 2008//
 /views_plugin_cache.inc/1.5/Wed Jun 24 02:45:01 2009//
 /views_plugin_cache_none.inc/1.2/Wed Jun  3 23:39:52 2009//
-/views_plugin_display.inc/1.25/Fri Jun 26 00:23:42 2009//
 /views_plugin_display_attachment.inc/1.6/Fri Jun 26 00:23:42 2009//
 /views_plugin_display_block.inc/1.5/Fri Jun 26 00:23:42 2009//
 /views_plugin_display_default.inc/1.1/Wed Sep  3 19:21:30 2008//
@@ -23,7 +22,8 @@
 /views_plugin_style_summary.inc/1.1/Wed Sep  3 19:21:30 2008//
 /views_plugin_style_summary_unformatted.inc/1.1/Wed Sep  3 19:21:30 2008//
 /views_plugin_cache_time.inc/1.3/Sat Jul  4 09:24:02 2009//
-/views_plugin_display_feed.inc/1.6/Sat Jul  4 09:24:02 2009//
 /views_plugin_row_fields.inc/1.2/Sat Jul  4 09:24:02 2009//
 /views_plugin_style_table.inc/1.7/Sat Jul  4 09:24:02 2009//
+/views_plugin_display.inc/1.26/Sun Sep 20 11:28:42 2009//
+/views_plugin_display_feed.inc/1.7/Sun Sep 20 11:28:42 2009//
 D
