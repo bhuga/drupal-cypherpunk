@@ -1,4 +1,4 @@
-// $Id: README.txt,v 1.2 2009/09/17 09:39:08 arto Exp $
+// $Id: README.txt,v 1.3 2009/09/24 15:22:16 arto Exp $
 
 OpenPGP for Drupal
 ==================
@@ -63,3 +63,4 @@ CREDITS
 -------
 Developed and maintained by Arto Bendiken <http://ar.to/>
 Developed for Cypherpunk Drupal <http://drupal.org/project/cypherpunk>
+Contributions by Adam Overlock <http://drupal.org/user/220401>

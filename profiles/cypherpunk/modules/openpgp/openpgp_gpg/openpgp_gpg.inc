@@ -1,5 +1,5 @@
 <?php
-// $Id: openpgp_gpg.inc,v 1.3 2009/09/19 17:17:48 arto Exp $
+// $Id: openpgp_gpg.inc,v 1.4 2009/09/24 15:14:29 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // GnuPG API implementation
@@ -9,7 +9,7 @@
  *
  * @see http://www.gnupg.org/
  */
-class GnuPG extends OpenPGP {
+class OpenPGP_GPG extends OpenPGP {
   static $version;
   static $output;
 

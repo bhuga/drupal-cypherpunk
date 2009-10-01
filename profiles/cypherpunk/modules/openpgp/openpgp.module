@@ -1,5 +1,5 @@
 <?php
-// $Id: openpgp.module,v 1.6 2009/09/18 10:31:51 arto Exp $
+// $Id: openpgp.module,v 1.7 2009/09/24 15:14:29 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Module settings
@@ -240,7 +240,7 @@ function openpgp_mail_encrypt(&$message, $recipients) {
     }
   }
   else {
-    watchdog('mail', 'Error encrypting e-mail (from %from to %to): <pre>@error</pre>', array('%from' => $message['from'], '%to' => $message['to'], '@error' => GnuPG::$output), WATCHDOG_WARNING, l(t('configure'), 'admin/settings/openpgp'));
+    watchdog('mail', 'Error encrypting e-mail (from %from to %to): <pre>@error</pre>', array('%from' => $message['from'], '%to' => $message['to'], '@error' => OpenPGP_GPG::$output), WATCHDOG_WARNING, l(t('configure'), 'admin/settings/openpgp'));
   }
 }
 
@@ -286,7 +286,7 @@ function openpgp_encrypt($plaintext, $keys, array $options = array()) {
   module_load_include('inc', 'openpgp', 'openpgp');
   module_load_include('inc', 'openpgp_gpg', 'openpgp_gpg');
 
-  return ($keys = openpgp_parse_keys($keys)) ? GnuPG::encrypt($plaintext, $keys, $options) : FALSE;
+  return ($keys = openpgp_parse_keys($keys)) ? OpenPGP_GPG::encrypt($plaintext, $keys, $options) : FALSE;
 }
 
 /**
@@ -297,7 +297,7 @@ function openpgp_decrypt($ciphertext, $keys = NULL, array $options = array()) {
   module_load_include('inc', 'openpgp', 'openpgp');
   module_load_include('inc', 'openpgp_gpg', 'openpgp_gpg');
 
-  return GnuPG::decrypt($ciphertext, $keys ? openpgp_parse_keys($keys) : NULL, $options);
+  return OpenPGP_GPG::decrypt($ciphertext, $keys ? openpgp_parse_keys($keys) : NULL, $options);
 }
 
 /**
@@ -337,7 +337,7 @@ function openpgp_parse_keys($keys) {
         $key = user_load($key->uid); // needed to prevent missing profile field in some contexts
       }
       if ($profile_field && !empty($key->$profile_field) && openpgp_unarmor($key->$profile_field)) { // a user object
-        $keys[$index] = $key = GnuPG::import_key($key->$profile_field);
+        $keys[$index] = $key = OpenPGP_GPG::import_key($key->$profile_field);
         //$keys[$index] = $key = openpgp_get_user_key($key);
       }
       if ($key instanceof OpenPGP_PublicKeyPacket) {

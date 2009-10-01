@@ -1,5 +1,5 @@
 <?php
-// $Id: openpgp_gpg.admin.inc,v 1.1 2009/07/11 20:14:14 arto Exp $
+// $Id: openpgp_gpg.admin.inc,v 1.2 2009/09/24 15:14:29 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Settings form
@@ -18,7 +18,7 @@ function openpgp_gpg_admin_settings() {
   $form['config']['openpgp_gpg_exec'] = array(
     '#type'          => 'textfield',
     '#title'         => t('Path to GnuPG executable'),
-    '#default_value' => GnuPG::binpath(),
+    '#default_value' => OpenPGP_GPG::binpath(),
     '#maxlength'     => 255,
     '#required'      => TRUE,
     '#description'   => t('A file system path to the <code>gpg</code> binary. On Unix systems, this would typically be located at <code>/usr/bin/gpg</code> or <code>/usr/local/bin/gpg</code>. On Mac OS X with MacPorts, the path would typically be <code>/opt/local/bin/gpg</code>.'),
@@ -26,7 +26,7 @@ function openpgp_gpg_admin_settings() {
   $form['config']['openpgp_gpg_homedir'] = array(
     '#type'          => 'textfield',
     '#title'         => t('Path to GnuPG home directory'),
-    '#default_value' => GnuPG::homedir(),
+    '#default_value' => OpenPGP_GPG::homedir(),
     '#maxlength'     => 255,
     '#required'      => TRUE,
     '#description'   => t('A file system path to the directory where <code>gpg</code> stores its configuration and keyrings. On Unix systems, this would typically be located at %path. If the directory doesn\'t exist, an attempt will be made to create it. Note that as this directory contains GnuPG\'s secure keyring, it is <strong>essential</strong> that you ensure the directory\'s access permissions are correctly set (i.e. not world-readable) and that the directory is not web accessible. Remember: security will only be as strong as the weakest link in the chain. For more information, please refer to the OpenPGP module\'s <code>INSTALL.txt</code> file.', array('%path' => '~/.gnupg')),

@@ -1,5 +1,5 @@
 <?php
-// $Id: openpgp_gpg.install,v 1.1 2009/07/11 20:14:14 arto Exp $
+// $Id: openpgp_gpg.install,v 1.2 2009/09/24 15:14:29 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Core API hooks
@@ -23,7 +23,7 @@ function openpgp_gpg_requirements($phase) {
     module_load_include('inc', 'openpgp', 'openpgp');
     module_load_include('inc', 'openpgp_gpg', 'openpgp_gpg');
 
-    if (($version = GnuPG::version())) { // GnuPG is installed
+    if (($version = OpenPGP_GPG::version())) { // GnuPG is installed
       $status['openpgp_gpg'] = array(
         'title'       => t('OpenPGP implementation'),
         'value'       => t('GnuPG @version available', array('@version' => (string)$version)),
@@ -31,7 +31,7 @@ function openpgp_gpg_requirements($phase) {
         'severity'    => REQUIREMENT_OK,
       );
 
-      if (!is_dir($homedir = GnuPG::homedir())) {
+      if (!is_dir($homedir = OpenPGP_GPG::homedir())) {
         $status['openpgp_gpg_homedir'] = array(
           'title'       => t('OpenPGP configuration'),
           'value'       => t('GnuPG home directory is misconfigured'),
