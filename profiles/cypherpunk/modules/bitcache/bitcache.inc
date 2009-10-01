@@ -1,5 +1,5 @@
 <?php
-// $Id: bitcache.inc,v 1.19 2009/07/01 08:55:37 arto Exp $
+// $Id: bitcache.inc,v 1.21 2009/10/01 03:48:28 arto Exp $
 
 //////////////////////////////////////////////////////////////////////////////
 // Constants
@@ -107,14 +107,17 @@ class Bitcache_Stream {
 
     // Attempts to detect a file's MIME type using the Unix `file' utility.
     // MIME content type format defined in http://www.ietf.org/rfc/rfc1521.txt
-    if (($proc = proc_open('file -bi -', array(0 => array('pipe', 'r'), 1 => array('pipe', 'w')), $pipes))) {
-      list($stdin, $stdout, $stderr) = $pipes;
-      fwrite($stdin, $this->data());
-      fclose($stdin);
-      $output = stream_get_contents($stdout);
-      fclose($stdout);
-      if (preg_match('!([\w-]+/[\w\d_+-]+)!', $output, $matches)) {
-        return $matches[1];
+    if (substr(PHP_OS, 0, 3) != 'WIN') { // only on Unix systems
+      if (($proc = proc_open('file -bi -', array(0 => array('pipe', 'r'), 1 => array('pipe', 'w')), $pipes))) {
+        list($stdin, $stdout, $stderr) = $pipes;
+        fwrite($stdin, $this->data());
+        fclose($stdin);
+        $output = stream_get_contents($stdout);
+        fclose($stdout);
+        proc_close($proc);
+        if (preg_match('!([\w-]+/[\w\d_+-]+)!', $output, $matches)) {
+          return $matches[1];
+        }
       }
     }
 
